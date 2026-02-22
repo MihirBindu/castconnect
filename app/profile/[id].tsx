@@ -77,7 +77,26 @@ export default function ProfileDetail() {
             <AvailabilityBadge status={profile.availability} />
           </View>
           <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{ROLE_LABELS[profile.role]}</Text>
+            <Text style={styles.roleText}>{profile.crewRole}</Text>
+          </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <View style={styles.statIconRow}>
+                <Ionicons name="star" size={14} color={Colors.primary} />
+                <Text style={styles.statValue}>{profile.rating.toFixed(1)}</Text>
+              </View>
+              <Text style={styles.statLabel}>{profile.reviewCount} reviews</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{profile.experience}</Text>
+              <Text style={styles.statLabel}>Experience</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{profile.dayRate > 0 ? `${(profile.dayRate / 1000).toFixed(0)}K` : 'N/A'}</Text>
+              <Text style={styles.statLabel}>Day Rate</Text>
+            </View>
           </View>
         </LinearGradient>
 
@@ -243,6 +262,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.primary,
     fontFamily: 'DMSans_600SemiBold',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 0,
+  },
+  statItem: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    gap: 2,
+  },
+  statIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statValue: {
+    fontSize: 16,
+    color: Colors.text,
+    fontFamily: 'DMSans_700Bold',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: Colors.textTertiary,
+    fontFamily: 'DMSans_400Regular',
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: Colors.border,
   },
   actions: {
     flexDirection: 'row',
