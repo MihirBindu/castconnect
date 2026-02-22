@@ -1,0 +1,300 @@
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Pressable,
+  Platform,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Colors from '@/constants/colors';
+import { useAppState } from '@/lib/store';
+import { CastingCallCard } from '@/components/CastingCallCard';
+import { ApplicationStatusBadge } from '@/components/StatusBadge';
+import { CastingCall } from '@/lib/types';
+import { INDUSTRY_LABELS } from '@/lib/mock-data';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+
+type ViewMode = 'browse' | 'applied';
+
+const INDUSTRY_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'film', label: 'Film' },
+  { key: 'ott', label: 'OTT' },
+  { key: 'ad_film', label: 'Ad Film' },
+  { key: 'theatre', label: 'Theatre' },
+  { key: 'web_series', label: 'Web Series' },
+];
+
+export default function JobsScreen() {
+  const insets = useSafeAreaInsets();
+  const { castingCalls, applications } = useAppState();
+  const [viewMode, setViewMode] = useState<ViewMode>('browse');
+  const [industryFilter, setIndustryFilter] = useState('all');
+  const webTopInset = Platform.OS === 'web' ? 67 : 0;
+  const topPadding = insets.top + webTopInset;
+
+  const filteredCalls = useMemo(() => {
+    let results = castingCalls.filter(c => c.status === 'open');
+    if (industryFilter !== 'all') {
+      results = results.filter(c => c.projectType === industryFilter);
+    }
+    return results;
+  }, [castingCalls, industryFilter]);
+
+  const renderCallItem = ({ item }: { item: CastingCall }) => (
+    <CastingCallCard item={item} />
+  );
+
+  return (
+    <View style={[styles.container, { paddingTop: topPadding }]}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Casting</Text>
+      </View>
+
+      <View style={styles.tabs}>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setViewMode('browse');
+          }}
+          style={[styles.tab, viewMode === 'browse' && styles.tabActive]}
+        >
+          <Ionicons
+            name="compass-outline"
+            size={18}
+            color={viewMode === 'browse' ? Colors.primary : Colors.textTertiary}
+          />
+          <Text style={[styles.tabText, viewMode === 'browse' && styles.tabTextActive]}>
+            Browse
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setViewMode('applied');
+          }}
+          style={[styles.tab, viewMode === 'applied' && styles.tabActive]}
+        >
+          <Ionicons
+            name="document-text-outline"
+            size={18}
+            color={viewMode === 'applied' ? Colors.primary : Colors.textTertiary}
+          />
+          <Text style={[styles.tabText, viewMode === 'applied' && styles.tabTextActive]}>
+            My Applications
+          </Text>
+        </Pressable>
+      </View>
+
+      {viewMode === 'browse' && (
+        <FlatList
+          data={INDUSTRY_FILTERS}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 4 }}
+          scrollEnabled={true}
+          style={{ flexGrow: 0, marginBottom: 8 }}
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => {
+                Haptics.selectionAsync();
+                setIndustryFilter(item.key);
+              }}
+              style={[
+                styles.filterChip,
+                industryFilter === item.key && styles.filterChipActive,
+              ]}
+            >
+              <Text style={[
+                styles.filterText,
+                industryFilter === item.key && styles.filterTextActive,
+              ]}>
+                {item.label}
+              </Text>
+            </Pressable>
+          )}
+          keyExtractor={item => item.key}
+        />
+      )}
+
+      {viewMode === 'browse' ? (
+        <FlatList
+          data={filteredCalls}
+          renderItem={renderCallItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={!!filteredCalls.length}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="film-outline" size={48} color={Colors.textTertiary} />
+              <Text style={styles.emptyText}>No casting calls found</Text>
+              <Text style={styles.emptySubtext}>Check back later for new opportunities</Text>
+            </View>
+          }
+        />
+      ) : (
+        <FlatList
+          data={applications}
+          keyExtractor={item => item.id}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={!!applications.length}
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({ pathname: '/casting/[id]', params: { id: item.castingCallId } });
+              }}
+              style={({ pressed }) => [styles.appCard, pressed && { opacity: 0.7 }]}
+            >
+              <View style={styles.appCardTop}>
+                <Text style={styles.appTitle} numberOfLines={2}>{item.castingCallTitle}</Text>
+                <ApplicationStatusBadge status={item.status} />
+              </View>
+              <Text style={styles.appDate}>
+                Applied on {new Date(item.appliedAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
+              </Text>
+              {item.note ? <Text style={styles.appNote}>{item.note}</Text> : null}
+            </Pressable>
+          )}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="document-outline" size={48} color={Colors.textTertiary} />
+              <Text style={styles.emptyText}>No applications yet</Text>
+              <Text style={styles.emptySubtext}>Start applying to casting calls</Text>
+            </View>
+          }
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 28,
+    color: Colors.text,
+    fontFamily: 'DMSans_700Bold',
+  },
+  tabs: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  tabActive: {
+    backgroundColor: Colors.surfaceElevated,
+  },
+  tabText: {
+    fontSize: 14,
+    color: Colors.textTertiary,
+    fontFamily: 'DMSans_500Medium',
+  },
+  tabTextActive: {
+    color: Colors.primary,
+    fontFamily: 'DMSans_600SemiBold',
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: 'rgba(212, 168, 83, 0.15)',
+    borderColor: Colors.primary,
+  },
+  filterText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontFamily: 'DMSans_500Medium',
+  },
+  filterTextActive: {
+    color: Colors.primary,
+  },
+  list: {
+    padding: 20,
+    gap: 14,
+  },
+  empty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+    gap: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    fontFamily: 'DMSans_600SemiBold',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: Colors.textTertiary,
+    fontFamily: 'DMSans_400Regular',
+  },
+  appCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  appCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 8,
+  },
+  appTitle: {
+    fontSize: 16,
+    color: Colors.text,
+    fontFamily: 'DMSans_600SemiBold',
+    flex: 1,
+  },
+  appDate: {
+    fontSize: 13,
+    color: Colors.textTertiary,
+    fontFamily: 'DMSans_400Regular',
+  },
+  appNote: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontFamily: 'DMSans_400Regular',
+    fontStyle: 'italic',
+    marginTop: 6,
+  },
+});
