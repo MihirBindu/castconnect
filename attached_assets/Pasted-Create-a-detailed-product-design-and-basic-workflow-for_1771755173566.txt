@@ -1,0 +1,106 @@
+Create a detailed product design and basic workflow for a **mobile casting platform** (similar to LinkedIn) built using **React Native** and relevant modern libraries/frameworks.
+
+The platform is intended for professionals in the film and series industry, including:
+
+* Actors
+* Directors
+* Writers
+* Cinematographers
+* Editors
+* Technical crew
+* Producers
+* Casting directors
+* Any related occupations
+
+### Core Vision
+
+The app should function as a professional networking and casting marketplace where talent can directly connect with producers, casting directors, and recruiters in a transparent and structured manner.
+
+---
+
+### Functional Requirements
+
+1. **User Roles**
+
+   * Talent (actors, writers, crew, etc.)
+   * Producers / Casting Directors / Recruiters
+   * Admin
+
+2. **Profile System**
+
+   * Users should be able to create professional profiles including:
+
+     * Bio and experience
+     * Skills and roles
+     * Portfolio links (YouTube, Vimeo, Drive, etc.)
+     * Uploaded audition videos
+     * Work samples
+     * Contact information (visible to producers/recruiters)
+     * Availability status
+
+3. **Connections & Discovery**
+
+   * Similar to LinkedIn-style networking:
+
+     * Follow / Connect functionality
+     * Search by role, skill, location, experience
+     * Filter by industry type (film, OTT, ad films, theatre, etc.)
+
+4. **Direct Contact Visibility**
+
+   * Talent should be able to provide contact details.
+   * Contact information must be visible to verified producers and recruiters.
+
+5. **Chat System**
+
+   * Real-time chat between:
+
+     * Talent ↔ Producer
+     * Talent ↔ Casting Director
+   * Messaging history stored securely
+   * Option to share audition links and documents inside chat
+
+6. **Audition & Job Workflow**
+
+   * Producers can post casting calls
+   * Talent can apply directly
+   * Talent can upload audition clips
+   * Transparent application status tracking (Applied → Shortlisted → Selected → Rejected)
+
+7. **Transparency & Trust**
+
+   * Verified producer badges
+   * Public activity logs (applications, job status)
+   * Clear communication trail
+   * Review/endorsement system
+
+---
+
+### Technical Requirements
+
+Provide:
+
+* System architecture overview
+* Recommended tech stack (React Native + backend + database + storage + authentication)
+* Suggested libraries (navigation, state management, chat, file uploads, video handling, etc.)
+* Basic database schema structure
+* Authentication flow
+* Chat implementation strategy
+* Media storage strategy
+* Role-based access control design
+* Scalable backend architecture
+
+---
+
+### Deliverables Expected in Response
+
+* App structure breakdown (screens & navigation flow)
+* Basic workflow diagram (step-by-step user journey)
+* Suggested UI structure (Home, Profile, Jobs, Chat, etc.)
+* Backend architecture overview
+* Technology stack recommendations
+* Database schema outline
+* MVP feature breakdown
+* Future scalability suggestions
+
+The output should be structured, practical, and suitable for direct implementation planning.
