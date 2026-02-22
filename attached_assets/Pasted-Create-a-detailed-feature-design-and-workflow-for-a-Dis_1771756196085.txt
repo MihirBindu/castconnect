@@ -1,0 +1,87 @@
+Create a detailed feature design and workflow for a **“Discover & Build Crew” page** within a mobile casting platform (React Native app) designed for film and series production hiring.
+
+### Feature Vision
+
+Design a centralized hiring marketplace where employers (producers, casting directors, recruiters) can build an entire production team in a single, seamless flow — instead of searching for one role at a time.
+
+---
+
+### Core Requirements
+
+The Discover page should allow employers to:
+
+1. **Select Multiple Roles Simultaneously**
+
+   * Choose multiple roles at once (e.g., Director, DOP, Actor, Lightman, Editor, Writer, etc.)
+   * Avoid forcing role-by-role searches
+
+2. **Unified Role View**
+
+   * Display profiles of all selected roles in one structured interface
+   * Organize results clearly by role category
+
+3. **Advanced Filtering**
+
+   * Filter by:
+
+     * Location
+     * Availability
+     * Budget range
+     * Experience level
+     * Ratings / reviews
+   * Filters should apply across all selected roles dynamically
+
+4. **Full Profile Access**
+
+   * Employers should be able to:
+
+     * View complete profiles
+     * Access portfolio links
+     * Watch audition/work videos
+     * Check ratings and reviews
+     * See availability calendar
+     * View contact information (if permitted)
+
+5. **Crew Basket (Shortlist System)**
+
+   * Employers can shortlist multiple people
+   * Add selected professionals into a “Crew Basket”
+   * The basket should:
+
+     * Be organized by role
+     * Show budget estimation
+     * Allow easy comparison
+     * Support removal or replacement of members
+
+6. **Team Assembly Flow**
+
+   * Employers should be able to:
+
+     * Build a complete production team
+     * Review the full crew structure
+     * Send bulk invites/messages
+     * Finalize team selection in one streamlined process
+
+---
+
+### Expected Output Structure
+
+Provide:
+
+* UX/UI layout structure for the Discover page
+* Step-by-step employer hiring workflow
+* Wireframe-level feature breakdown
+* Crew Basket logic and data flow
+* Backend logic and database considerations
+* Filtering system design
+* Performance and scalability considerations
+
+The design should prioritize:
+
+* Speed
+* Clarity
+* Efficiency
+* Transparency
+* Real-world production hiring needs
+
+Goal: A single platform where an employer can build their entire production team — fast, filtered, and in one place.

@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import { UserProfile, CastingCall, Conversation, Message, Application } from './types';
+import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole } from './types';
 
 export interface AppState {
   myProfile: UserProfile;
@@ -8,10 +8,17 @@ export interface AppState {
   conversations: Conversation[];
   messages: Record<string, Message[]>;
   applications: Application[];
+  crewBasket: CrewBasketItem[];
+  crewProjectName: string;
   updateProfile: (updates: Partial<UserProfile>) => void;
   addApplication: (castingCallId: string, castingCallTitle: string) => void;
   sendMessage: (conversationId: string, content: string) => void;
   toggleConnection: (userId: string) => void;
+  addToCrewBasket: (profileId: string, role: CrewRole) => void;
+  removeFromCrewBasket: (profileId: string) => void;
+  clearCrewBasket: () => void;
+  setCrewProjectName: (name: string) => void;
+  isInCrewBasket: (profileId: string) => boolean;
 }
 
 export const AppContext = createContext<AppState | null>(null);

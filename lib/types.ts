@@ -6,14 +6,33 @@ export type ApplicationStatus = 'applied' | 'shortlisted' | 'selected' | 'reject
 
 export type AvailabilityStatus = 'available' | 'busy' | 'not_available';
 
+export type CrewRole =
+  | 'Director'
+  | 'Actor'
+  | 'Cinematographer'
+  | 'Editor'
+  | 'Writer'
+  | 'Sound Designer'
+  | 'Lightman'
+  | 'Producer'
+  | 'Casting Director'
+  | 'Production Designer'
+  | 'Makeup Artist'
+  | 'Costume Designer'
+  | 'VFX Artist'
+  | 'Choreographer'
+  | 'Stunt Coordinator';
+
 export interface UserProfile {
   id: string;
   name: string;
   role: UserRole;
   title: string;
+  crewRole: CrewRole;
   bio: string;
   skills: string[];
   experience: string;
+  experienceYears: number;
   location: string;
   availability: AvailabilityStatus;
   portfolioLinks: string[];
@@ -23,6 +42,9 @@ export interface UserProfile {
   isVerified: boolean;
   industryTypes: IndustryType[];
   connections: string[];
+  dayRate: number;
+  rating: number;
+  reviewCount: number;
   createdAt: string;
 }
 
@@ -76,4 +98,17 @@ export interface Conversation {
   lastMessage: string;
   lastMessageTime: string;
   unreadCount: number;
+}
+
+export interface CrewBasketItem {
+  profileId: string;
+  assignedRole: CrewRole;
+  addedAt: string;
+}
+
+export interface CrewBasket {
+  id: string;
+  projectName: string;
+  items: CrewBasketItem[];
+  createdAt: string;
 }
