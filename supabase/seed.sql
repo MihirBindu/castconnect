@@ -60,11 +60,7 @@ delete from auth.users
 
 -- ────────────────────────────────────────────────────────────
 -- AUTH USERS (21 users — all password: Test@1234)
--- Disable the auto-profile trigger so we can insert full
--- profile data ourselves below without hitting a duplicate key.
 -- ────────────────────────────────────────────────────────────
-alter table auth.users disable trigger on_auth_user_created;
-
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
   email_confirmed_at, created_at, updated_at,
@@ -155,11 +151,10 @@ values
    'tara.writer@email.com',    crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Tara Menon"}',          '{"provider":"email","providers":["email"]}');
 
-alter table auth.users enable trigger on_auth_user_created;
-
 -- ────────────────────────────────────────────────────────────
 -- PROFILES
--- Inserted directly with full data (trigger was disabled above)
+-- The auth trigger already created a minimal row per user.
+-- ON CONFLICT DO UPDATE overwrites it with full profile data.
 -- ────────────────────────────────────────────────────────────
 insert into public.profiles (
   id, name, role, title, crew_role, bio, skills, experience, experience_years,
@@ -375,7 +370,27 @@ insert into public.profiles (
  '12 years',12,'Mumbai, India','available',
  array['https://taramenon.com'],
  null,'tara.writer@email.com','+91 9876543229',true,
- array['film','ott','web_series']::text[],50000,4.8,30,'2023-12-01T10:00:00Z');
+ array['film','ott','web_series']::text[],50000,4.8,30,'2023-12-01T10:00:00Z')
+on conflict (id) do update set
+  name             = excluded.name,
+  role             = excluded.role,
+  title            = excluded.title,
+  crew_role        = excluded.crew_role,
+  bio              = excluded.bio,
+  skills           = excluded.skills,
+  experience       = excluded.experience,
+  experience_years = excluded.experience_years,
+  location         = excluded.location,
+  availability     = excluded.availability,
+  portfolio_links  = excluded.portfolio_links,
+  contact_email    = excluded.contact_email,
+  contact_phone    = excluded.contact_phone,
+  is_verified      = excluded.is_verified,
+  industry_types   = excluded.industry_types,
+  day_rate         = excluded.day_rate,
+  rating           = excluded.rating,
+  review_count     = excluded.review_count,
+  created_at       = excluded.created_at;
 
 -- ────────────────────────────────────────────────────────────
 -- CONNECTIONS (from mock data)
