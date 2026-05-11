@@ -479,12 +479,12 @@ insert into public.casting_calls (
 alter table public.applications disable trigger on_application_created;
 
 insert into public.applications (id, casting_call_id, applicant_id, status, note, applied_at) values
-  ('ap100000-0000-4000-8000-000000000001',
+  ('a1100000-0000-4000-8000-000000000001',
    'cc100000-0000-4000-8000-000000000001',
    '00000000-0000-4000-8000-000000000000',
    'shortlisted','Strong audition tape submitted','2026-02-12T10:00:00Z'),
 
-  ('ap200000-0000-4000-8000-000000000002',
+  ('a2100000-0000-4000-8000-000000000002',
    'cc400000-0000-4000-8000-000000000004',
    '00000000-0000-4000-8000-000000000000',
    'applied','','2026-02-19T14:00:00Z');
@@ -497,63 +497,63 @@ alter table public.applications enable trigger on_application_created;
 insert into public.messages (id, sender_id, receiver_id, content, read, created_at) values
 
 -- conv-1: Alex ↔ Neha Agarwal
-('msg10000-0000-4000-8000-000000000001',
+('bb100000-0000-4000-8000-000000000001',
  '00000000-0000-4000-8000-000000000005',
  '00000000-0000-4000-8000-000000000000',
  'Hi! I saw your profile and I think you would be great for the period drama we are casting.',
  true,'2026-02-21T10:00:00Z'),
 
-('msg10000-0000-4000-8000-000000000002',
+('bb100000-0000-4000-8000-000000000002',
  '00000000-0000-4000-8000-000000000000',
  '00000000-0000-4000-8000-000000000005',
  'Thank you! I would love to learn more about the role and project.',
  true,'2026-02-21T10:15:00Z'),
 
-('msg10000-0000-4000-8000-000000000003',
+('bb100000-0000-4000-8000-000000000003',
  '00000000-0000-4000-8000-000000000005',
  '00000000-0000-4000-8000-000000000000',
  'The project is a feature film set in pre-independence India. The lead role requires strong emotional range.',
  true,'2026-02-21T11:00:00Z'),
 
-('msg10000-0000-4000-8000-000000000004',
+('bb100000-0000-4000-8000-000000000004',
  '00000000-0000-4000-8000-000000000000',
  '00000000-0000-4000-8000-000000000005',
  'That sounds incredibly exciting. I have experience with period dramas and would be very interested.',
  true,'2026-02-21T11:30:00Z'),
 
-('msg10000-0000-4000-8000-000000000005',
+('bb100000-0000-4000-8000-000000000005',
  '00000000-0000-4000-8000-000000000005',
  '00000000-0000-4000-8000-000000000000',
  'We would like to schedule your audition for next week.',
  false,'2026-02-22T09:30:00Z'),
 
 -- conv-2: Alex ↔ Kavita Productions
-('msg10000-0000-4000-8000-000000000006',
+('bb100000-0000-4000-8000-000000000006',
  '00000000-0000-4000-8000-000000000000',
  '00000000-0000-4000-8000-000000000004',
  'Hello, I applied for the Editor role for City Lights. Looking forward to hearing from you.',
  true,'2026-02-20T14:00:00Z'),
 
-('msg10000-0000-4000-8000-000000000007',
+('bb100000-0000-4000-8000-000000000007',
  '00000000-0000-4000-8000-000000000004',
  '00000000-0000-4000-8000-000000000000',
  'Thank you for your application. We are reviewing your portfolio.',
  true,'2026-02-21T16:45:00Z'),
 
 -- conv-3: Alex ↔ Rohan Kapoor
-('msg10000-0000-4000-8000-000000000008',
+('bb100000-0000-4000-8000-000000000008',
  '00000000-0000-4000-8000-000000000003',
  '00000000-0000-4000-8000-000000000000',
  'Hey! I noticed you are also based in Mumbai. I am working on a short film and looking for collaborators.',
  true,'2026-02-20T13:00:00Z'),
 
-('msg10000-0000-4000-8000-000000000009',
+('bb100000-0000-4000-8000-000000000009',
  '00000000-0000-4000-8000-000000000000',
  '00000000-0000-4000-8000-000000000003',
  'That sounds interesting! What genre is the short film?',
  true,'2026-02-20T13:45:00Z'),
 
-('msg10000-0000-4000-8000-000000000010',
+('bb100000-0000-4000-8000-000000000010',
  '00000000-0000-4000-8000-000000000003',
  '00000000-0000-4000-8000-000000000000',
  'Would love to collaborate on the short film project!',
