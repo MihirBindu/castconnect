@@ -19,6 +19,7 @@ export interface AppState {
   clearCrewBasket: () => void;
   setCrewProjectName: (name: string) => void;
   isInCrewBasket: (profileId: string) => boolean;
+  signOut: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppState | null>(null);
