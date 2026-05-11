@@ -79,7 +79,6 @@ function makeStyles(C: ThemeColors) {
     },
     filterRow: {
       height: 44,
-      paddingHorizontal: 20,
       marginBottom: 6,
     },
     filterRowContent: {
@@ -87,6 +86,7 @@ function makeStyles(C: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: 5,
+      paddingHorizontal: 20,
     },
     filterChip: {
       height: 34,
