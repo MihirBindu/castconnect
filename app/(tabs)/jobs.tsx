@@ -7,6 +7,7 @@ import {
   Pressable,
   Platform,
   TextInput,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,13 +77,24 @@ function makeStyles(C: ThemeColors) {
       color: C.primary,
       fontFamily: 'DMSans_600SemiBold',
     },
+    filterRow: {
+      paddingHorizontal: 20,
+      marginBottom: 10,
+    },
+    filterRowContent: {
+      gap: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
     filterChip: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 20,
+      height: 34,
+      paddingHorizontal: 14,
+      borderRadius: 17,
       backgroundColor: C.surface,
       borderWidth: 1,
       borderColor: C.border,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     filterChipActive: {
       backgroundColor: 'rgba(212, 168, 83, 0.15)',
@@ -92,9 +104,11 @@ function makeStyles(C: ThemeColors) {
       fontSize: 13,
       color: C.textSecondary,
       fontFamily: 'DMSans_500Medium',
+      lineHeight: 18,
     },
     filterTextActive: {
       color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
     },
     list: {
       padding: 20,
@@ -268,15 +282,15 @@ export default function JobsScreen() {
       )}
 
       {viewMode === 'browse' && (
-        <FlatList
-          data={INDUSTRY_FILTERS}
+        <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, gap: 8, paddingBottom: 4 }}
-          scrollEnabled={true}
-          style={{ flexGrow: 0, marginBottom: 8 }}
-          renderItem={({ item }) => (
+          style={styles.filterRow}
+          contentContainerStyle={styles.filterRowContent}
+        >
+          {INDUSTRY_FILTERS.map(item => (
             <Pressable
+              key={item.key}
               onPress={() => {
                 Haptics.selectionAsync();
                 setIndustryFilter(item.key);
@@ -293,9 +307,8 @@ export default function JobsScreen() {
                 {item.label}
               </Text>
             </Pressable>
-          )}
-          keyExtractor={item => item.key}
-        />
+          ))}
+        </ScrollView>
       )}
 
       {viewMode === 'browse' && (
