@@ -135,7 +135,7 @@ function makeStyles(C: ThemeColors) {
       paddingBottom: 8,
     },
     sectionTitle: {
-      fontSize: 16,
+      fontSize: 17,
       color: C.primary,
       fontFamily: 'DMSans_700Bold',
     },
@@ -147,6 +147,8 @@ function makeStyles(C: ThemeColors) {
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 8,
+      borderWidth: 1,
+      borderColor: C.border,
     },
     memberCard: {
       flexDirection: 'row',
@@ -289,12 +291,18 @@ export default function CrewBasketScreen() {
   }, [crewBasket, profileMap]);
 
   const formatBudget = (amount: number) => {
-    if (amount >= 100000) return `${(amount / 100000).toFixed(1)}L`;
-    if (amount >= 1000) return `${(amount / 1000).toFixed(0)}K`;
-    return `${amount}`;
+    if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
+    if (amount >= 1000) return `₹${(amount / 1000).toFixed(0)}K`;
+    return `₹${amount}`;
   };
 
   const handleRemove = (profileId: string, name: string) => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`Remove ${name} from your crew basket?`)) return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      removeFromCrewBasket(profileId);
+      return;
+    }
     Alert.alert(
       'Remove from Crew',
       `Remove ${name} from your crew basket?`,
@@ -313,6 +321,12 @@ export default function CrewBasketScreen() {
   };
 
   const handleClearAll = () => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm('Remove all members from your crew basket?')) return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      clearCrewBasket();
+      return;
+    }
     Alert.alert(
       'Clear Crew Basket',
       'Remove all members from your crew basket?',
@@ -355,7 +369,7 @@ export default function CrewBasketScreen() {
             Browse professionals on the Discover tab and add them to your crew
           </Text>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => router.push('/(tabs)/discover' as any)}
             style={styles.browseBtn}
           >
             <Text style={styles.browseBtnText}>Browse Talent</Text>
@@ -376,7 +390,7 @@ export default function CrewBasketScreen() {
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>{formatBudget(totalBudget)}</Text>
-              <Text style={styles.summaryLabel}>Est. Day Rate</Text>
+              <Text style={styles.summaryLabel}>Total/Day</Text>
             </View>
           </View>
 

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useColors } from '@/lib/ThemeContext';
 import { ThemeColors } from '@/constants/colors';
@@ -122,17 +123,18 @@ function makeStyles(C: ThemeColors) {
     },
     filterBadge: {
       position: 'absolute',
-      top: 4,
-      right: 4,
+      top: 2,
+      right: 2,
       backgroundColor: C.primary,
-      borderRadius: 6,
-      width: 12,
-      height: 12,
+      borderRadius: 9,
+      minWidth: 18,
+      height: 18,
       alignItems: 'center',
       justifyContent: 'center',
+      paddingHorizontal: 4,
     },
     filterBadgeText: {
-      fontSize: 8,
+      fontSize: 11,
       color: C.background,
       fontFamily: 'DMSans_700Bold',
     },
@@ -175,17 +177,16 @@ function makeStyles(C: ThemeColors) {
       color: C.primary,
     },
     sortRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: 'column',
       paddingHorizontal: 20,
-      paddingVertical: 8,
-      gap: 10,
+      paddingTop: 8,
+      paddingBottom: 4,
+      gap: 8,
     },
     resultCount: {
       fontSize: 12,
       color: C.textTertiary,
       fontFamily: 'DMSans_500Medium',
-      minWidth: 90,
     },
     sortChip: {
       paddingHorizontal: 10,
@@ -217,7 +218,7 @@ function makeStyles(C: ThemeColors) {
       paddingBottom: 4,
     },
     sectionTitle: {
-      fontSize: 18,
+      fontSize: 17,
       color: C.primary,
       fontFamily: 'DMSans_700Bold',
     },
@@ -234,7 +235,7 @@ function makeStyles(C: ThemeColors) {
       borderColor: C.border,
     },
     cardPressed: {
-      opacity: 0.85,
+      opacity: 0.75,
       transform: [{ scale: 0.98 }],
     },
     cardTop: {
@@ -567,8 +568,8 @@ export default function DiscoverScreen() {
 
   const formatRate = (rate: number) => {
     if (rate === 0) return 'N/A';
-    if (rate >= 100000) return `${(rate / 100000).toFixed(1)}L/day`;
-    return `${(rate / 1000).toFixed(0)}K/day`;
+    if (rate >= 100000) return `₹${(rate / 100000).toFixed(1)}L/day`;
+    return `₹${(rate / 1000).toFixed(0)}K/day`;
   };
 
   const renderProfileCard = useCallback(({ item }: { item: UserProfile }) => {
@@ -719,24 +720,33 @@ export default function DiscoverScreen() {
 
       <View style={styles.roleSection}>
         <Text style={styles.roleSectionLabel}>Select roles to hire</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roleChips}>
-          {ALL_CREW_ROLES.map(role => {
-            const selected = selectedRoles.includes(role);
-            return (
-              <Pressable
-                key={role}
-                testID={`role-chip-${role}`}
-                onPress={() => toggleRole(role)}
-                style={[styles.roleChip, selected && styles.roleChipActive]}
-              >
-                <Text style={[styles.roleChipText, selected && styles.roleChipTextActive]}>
-                  {role}
-                </Text>
-                {selected && <Ionicons name="checkmark" size={14} color={C.primary} style={{ marginLeft: 2 }} />}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <View style={{ overflow: 'hidden' }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roleChips}>
+            {ALL_CREW_ROLES.map(role => {
+              const selected = selectedRoles.includes(role);
+              return (
+                <Pressable
+                  key={role}
+                  testID={`role-chip-${role}`}
+                  onPress={() => toggleRole(role)}
+                  style={[styles.roleChip, selected && styles.roleChipActive]}
+                >
+                  <Text style={[styles.roleChipText, selected && styles.roleChipTextActive]}>
+                    {role}
+                  </Text>
+                  {selected && <Ionicons name="checkmark" size={14} color={C.primary} style={{ marginLeft: 2 }} />}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <LinearGradient
+            colors={['transparent', C.background]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40 }}
+            pointerEvents="none"
+          />
+        </View>
       </View>
 
       <View style={styles.sortRow}>
@@ -766,6 +776,7 @@ export default function DiscoverScreen() {
         </ScrollView>
       </View>
 
+
       <FlatList
         data={flatData}
         renderItem={({ item }) => {
@@ -780,7 +791,7 @@ export default function DiscoverScreen() {
           { paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 },
         ]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={!!flatData.length}
+        scrollEnabled={true}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="people-outline" size={48} color={C.textTertiary} />
@@ -810,6 +821,7 @@ export default function DiscoverScreen() {
       <Modal visible={showFilters} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { paddingBottom: Platform.OS === 'web' ? 34 : insets.bottom + 16 }]}>
+            <View style={{ width: 36, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 12 }} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
               <Pressable onPress={() => setShowFilters(false)}>

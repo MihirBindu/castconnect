@@ -30,7 +30,6 @@ function makeStyles(C: ThemeColors) {
     topBar: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
       paddingHorizontal: 16,
       paddingVertical: 12,
     },
@@ -46,6 +45,8 @@ function makeStyles(C: ThemeColors) {
       fontSize: 16,
       color: C.textSecondary,
       fontFamily: 'DMSans_600SemiBold',
+      flex: 1,
+      textAlign: 'center',
     },
     profileHeader: {
       alignItems: 'center',
@@ -253,7 +254,7 @@ export default function ProfileDetail() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { profiles, myProfile, toggleConnection } = useAppState();
+  const { profiles, myProfile, conversations, toggleConnection } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
@@ -324,40 +325,46 @@ export default function ProfileDetail() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{profile.dayRate > 0 ? `${(profile.dayRate / 1000).toFixed(0)}K` : 'N/A'}</Text>
+              <Text style={styles.statValue}>{profile.dayRate > 0 ? `₹${(profile.dayRate / 1000).toFixed(0)}K` : 'N/A'}</Text>
               <Text style={styles.statLabel}>Day Rate</Text>
             </View>
           </View>
         </LinearGradient>
 
-        <View style={styles.actions}>
-          <Pressable
-            onPress={handleConnect}
-            style={({ pressed }) => [
-              styles.connectBtn,
-              isConnected && styles.connectedBtn,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Ionicons
-              name={isConnected ? 'checkmark' : 'person-add-outline'}
-              size={18}
-              color={isConnected ? '#34C759' : C.black}
-            />
-            <Text style={[styles.connectBtnText, isConnected && styles.connectedBtnText]}>
-              {isConnected ? 'Connected' : 'Connect'}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-            style={({ pressed }) => [styles.messageBtn, pressed && { opacity: 0.85 }]}
-          >
-            <Ionicons name="chatbubble-outline" size={18} color={C.primary} />
-            <Text style={styles.messageBtnText}>Message</Text>
-          </Pressable>
-        </View>
+        {profile.id !== myProfile.id && (
+          <View style={styles.actions}>
+            <Pressable
+              onPress={handleConnect}
+              style={({ pressed }) => [
+                styles.connectBtn,
+                isConnected && styles.connectedBtn,
+                pressed && { opacity: 0.75 },
+              ]}
+            >
+              <Ionicons
+                name={isConnected ? 'checkmark' : 'person-add-outline'}
+                size={18}
+                color={isConnected ? '#34C759' : C.black}
+              />
+              <Text style={[styles.connectBtnText, isConnected && styles.connectedBtnText]}>
+                {isConnected ? 'Connected' : 'Connect'}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                const conv = conversations.find(c => c.participantId === profile.id);
+                if (conv) {
+                  router.push({ pathname: '/chat/[id]', params: { id: conv.id } });
+                }
+              }}
+              style={({ pressed }) => [styles.messageBtn, pressed && { opacity: 0.75 }]}
+            >
+              <Ionicons name="chatbubble-outline" size={18} color={C.primary} />
+              <Text style={styles.messageBtnText}>Message</Text>
+            </Pressable>
+          </View>
+        )}
 
         <View style={styles.content}>
           <View style={styles.section}>
