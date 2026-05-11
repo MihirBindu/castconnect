@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/lib/ThemeContext';
 import { ThemeColors } from '@/constants/colors';
@@ -56,7 +56,11 @@ export function Avatar({ name, size = 44, image, showVerified }: AvatarProps) {
   return (
     <View style={{ position: 'relative' }}>
       <View style={[styles.container, { width: size, height: size, borderRadius: size / 2, backgroundColor: bgColor }]}>
-        <Text style={[styles.initials, { fontSize }]}>{getInitials(name)}</Text>
+        {image ? (
+          <Image source={{ uri: image }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+        ) : (
+          <Text style={[styles.initials, { fontSize }]}>{getInitials(name)}</Text>
+        )}
       </View>
       {showVerified && (
         <View style={[styles.badge, { right: -2, bottom: -2 }]}>

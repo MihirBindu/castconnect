@@ -236,6 +236,12 @@ function makeStyles(C: ThemeColors) {
     themeDotActive: {
       backgroundColor: C.primary,
     },
+    dayRateText: {
+      fontSize: 14,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+      marginTop: 2,
+    },
   });
 }
 
@@ -250,6 +256,16 @@ export default function MeScreen() {
 
   const openLink = (url: string) => {
     Linking.openURL(url);
+  };
+
+  const formatPortfolioUrl = (url: string) => {
+    try {
+      const u = new URL(url);
+      const parts = u.pathname.split('/').filter(Boolean);
+      return parts.length > 0 ? `${u.hostname}/${parts[0]}` : u.hostname;
+    } catch {
+      return url;
+    }
   };
 
   const handleThemeChange = (newMode: ThemeMode) => {
@@ -292,6 +308,11 @@ export default function MeScreen() {
           <View style={styles.roleBadge}>
             <Text style={styles.roleText}>{ROLE_LABELS[myProfile.role]}</Text>
           </View>
+          {myProfile.dayRate > 0 && (
+            <Text style={styles.dayRateText}>
+              ₹{myProfile.dayRate >= 100000 ? `${(myProfile.dayRate / 100000).toFixed(1)}L` : `${(myProfile.dayRate / 1000).toFixed(0)}K`}/day
+            </Text>
+          )}
         </LinearGradient>
 
         <View style={styles.appearanceSection}>
@@ -360,10 +381,10 @@ export default function MeScreen() {
               <Pressable
                 key={i}
                 onPress={() => openLink(link)}
-                style={({ pressed }) => [styles.linkItem, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [styles.linkItem, pressed && { opacity: 0.75 }]}
               >
                 <MaterialCommunityIcons name="link-variant" size={18} color={C.primary} />
-                <Text style={styles.linkText} numberOfLines={1}>{link}</Text>
+                <Text style={styles.linkText} numberOfLines={1}>{formatPortfolioUrl(link)}</Text>
                 <Ionicons name="open-outline" size={14} color={C.textTertiary} />
               </Pressable>
             ))}
@@ -372,14 +393,20 @@ export default function MeScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Contact</Text>
-          <View style={styles.contactItem}>
+          <Pressable
+            style={({ pressed }) => [styles.contactItem, pressed && { opacity: 0.75 }]}
+            onPress={() => Linking.openURL(`mailto:${myProfile.contactEmail}`)}
+          >
             <Ionicons name="mail-outline" size={18} color={C.textSecondary} />
             <Text style={styles.contactText}>{myProfile.contactEmail}</Text>
-          </View>
-          <View style={styles.contactItem}>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.contactItem, pressed && { opacity: 0.75 }]}
+            onPress={() => Linking.openURL(`tel:${myProfile.contactPhone}`)}
+          >
             <Ionicons name="call-outline" size={18} color={C.textSecondary} />
             <Text style={styles.contactText}>{myProfile.contactPhone}</Text>
-          </View>
+          </Pressable>
         </View>
 
         <View style={styles.statsSection}>

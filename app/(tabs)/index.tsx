@@ -96,10 +96,9 @@ function makeStyles(C: ThemeColors) {
       marginBottom: 14,
     },
     sectionTitle: {
-      fontSize: 18,
+      fontSize: 17,
       color: C.text,
       fontFamily: 'DMSans_700Bold',
-      paddingHorizontal: 20,
       marginBottom: 14,
     },
     seeAll: {
@@ -168,7 +167,6 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push('/notifications' as any);
             }}
           >
             <View style={styles.notifBtn}>
@@ -203,7 +201,12 @@ export default function HomeScreen() {
 
         {recentApps.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Applications</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Your Applications</Text>
+              <Pressable onPress={() => router.push('/(tabs)/jobs' as any)}>
+                <Text style={styles.seeAll}>See All</Text>
+              </Pressable>
+            </View>
             {recentApps.map(app => (
               <Pressable
                 key={app.id}
@@ -211,7 +214,7 @@ export default function HomeScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   router.push({ pathname: '/casting/[id]', params: { id: app.castingCallId } });
                 }}
-                style={({ pressed }) => [styles.appItem, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [styles.appItem, pressed && { opacity: 0.75 }]}
               >
                 <View style={styles.appInfo}>
                   <Text style={styles.appTitle} numberOfLines={1}>{app.castingCallTitle}</Text>
@@ -228,6 +231,9 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Featured Talent</Text>
+            <Pressable onPress={() => router.push('/(tabs)/discover' as any)}>
+              <Text style={styles.seeAll}>See All</Text>
+            </Pressable>
           </View>
           <FlatList
             data={featuredTalent}

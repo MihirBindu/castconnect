@@ -6,6 +6,7 @@ import {
   FlatList,
   Pressable,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -147,6 +148,31 @@ function makeStyles(C: ThemeColors) {
       fontStyle: 'italic',
       marginTop: 6,
     },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: C.surfaceLight,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      height: 40,
+      gap: 8,
+      marginHorizontal: 20,
+      marginBottom: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: C.text,
+      fontFamily: 'DMSans_400Regular',
+      height: '100%',
+    },
+    resultCount: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_500Medium',
+      paddingHorizontal: 20,
+      paddingBottom: 4,
+    },
   });
 }
 
@@ -157,6 +183,7 @@ export default function JobsScreen() {
   const { castingCalls, applications } = useAppState();
   const [viewMode, setViewMode] = useState<ViewMode>('browse');
   const [industryFilter, setIndustryFilter] = useState('all');
+  const [browseSearch, setBrowseSearch] = useState('');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
@@ -165,8 +192,17 @@ export default function JobsScreen() {
     if (industryFilter !== 'all') {
       results = results.filter(c => c.projectType === industryFilter);
     }
+    if (browseSearch.trim()) {
+      const q = browseSearch.toLowerCase();
+      results = results.filter(c =>
+        c.title.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q) ||
+        c.roleNeeded.toLowerCase().includes(q) ||
+        c.projectName.toLowerCase().includes(q)
+      );
+    }
     return results;
-  }, [castingCalls, industryFilter]);
+  }, [castingCalls, industryFilter, browseSearch]);
 
   const renderCallItem = ({ item }: { item: CastingCall }) => (
     <CastingCallCard item={item} />
@@ -214,6 +250,24 @@ export default function JobsScreen() {
       </View>
 
       {viewMode === 'browse' && (
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={16} color={C.textTertiary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search productions, roles..."
+            placeholderTextColor={C.textTertiary}
+            value={browseSearch}
+            onChangeText={setBrowseSearch}
+          />
+          {browseSearch.length > 0 && (
+            <Pressable onPress={() => setBrowseSearch('')}>
+              <Ionicons name="close-circle" size={16} color={C.textTertiary} />
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      {viewMode === 'browse' && (
         <FlatList
           data={INDUSTRY_FILTERS}
           horizontal
@@ -244,6 +298,12 @@ export default function JobsScreen() {
         />
       )}
 
+      {viewMode === 'browse' && (
+        <Text style={styles.resultCount}>
+          {filteredCalls.length} open call{filteredCalls.length !== 1 ? 's' : ''}
+        </Text>
+      )}
+
       {viewMode === 'browse' ? (
         <FlatList
           data={filteredCalls}
@@ -254,7 +314,7 @@ export default function JobsScreen() {
             { paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 },
           ]}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={!!filteredCalls.length}
+          scrollEnabled={true}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="film-outline" size={48} color={C.textTertiary} />
@@ -272,18 +332,19 @@ export default function JobsScreen() {
             { paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 },
           ]}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={!!applications.length}
+          scrollEnabled={true}
           renderItem={({ item }) => (
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push({ pathname: '/casting/[id]', params: { id: item.castingCallId } });
               }}
-              style={({ pressed }) => [styles.appCard, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.appCard, pressed && { opacity: 0.75 }]}
             >
               <View style={styles.appCardTop}>
                 <Text style={styles.appTitle} numberOfLines={2}>{item.castingCallTitle}</Text>
                 <ApplicationStatusBadge status={item.status} />
+                <Ionicons name="chevron-forward" size={16} color={C.textTertiary} />
               </View>
               <Text style={styles.appDate}>
                 Applied on {new Date(item.appliedAt).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
