@@ -78,6 +78,7 @@ function makeStyles(C: ThemeColors) {
       fontFamily: 'DMSans_600SemiBold',
     },
     filterRow: {
+      height: 44,
       paddingHorizontal: 20,
       marginBottom: 6,
     },
@@ -85,6 +86,7 @@ function makeStyles(C: ThemeColors) {
       gap: 8,
       flexDirection: 'row',
       alignItems: 'center',
+      paddingVertical: 5,
     },
     filterChip: {
       height: 34,
