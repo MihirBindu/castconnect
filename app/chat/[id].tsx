@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,25 +12,184 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 import { Message } from '@/lib/types';
 import * as Haptics from 'expo-haptics';
 
+function makeBubbleStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    bubbleRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      marginBottom: 4,
+    },
+    bubbleRowMe: {
+      justifyContent: 'flex-end',
+    },
+    bubble: {
+      maxWidth: '78%',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 18,
+    },
+    bubbleMe: {
+      backgroundColor: C.primary,
+      borderBottomRightRadius: 6,
+    },
+    bubbleOther: {
+      backgroundColor: C.surfaceLight,
+      borderBottomLeftRadius: 6,
+    },
+    bubbleText: {
+      fontSize: 15,
+      color: C.text,
+      fontFamily: 'DMSans_400Regular',
+      lineHeight: 20,
+    },
+    bubbleTextMe: {
+      color: C.black,
+    },
+    bubbleTime: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+      marginTop: 4,
+      alignSelf: 'flex-end',
+    },
+    bubbleTimeMe: {
+      color: 'rgba(0,0,0,0.5)',
+    },
+  });
+}
+
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: C.border,
+      gap: 8,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: C.surfaceLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    chatHeader: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    chatName: {
+      fontSize: 16,
+      color: C.text,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    chatRole: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    chatArea: {
+      flex: 1,
+    },
+    messageList: {
+      padding: 16,
+      gap: 6,
+    },
+    inputBar: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: C.border,
+      backgroundColor: C.background,
+      gap: 10,
+    },
+    textInput: {
+      flex: 1,
+      backgroundColor: C.surfaceLight,
+      borderRadius: 22,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      fontSize: 15,
+      color: C.text,
+      fontFamily: 'DMSans_400Regular',
+      maxHeight: 100,
+    },
+    sendBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: C.surfaceElevated,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 1,
+    },
+    sendBtnActive: {
+      backgroundColor: C.primary,
+    },
+    emptyChat: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 60,
+      gap: 8,
+      transform: [{ scaleY: -1 }],
+    },
+    emptyChatText: {
+      fontSize: 14,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    notFound: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+    },
+    notFoundText: {
+      fontSize: 16,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    backLink: {
+      fontSize: 14,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+  });
+}
+
 function MessageBubble({ message, isMe }: { message: Message; isMe: boolean }) {
+  const C = useColors();
+  const bStyles = useMemo(() => makeBubbleStyles(C), [C]);
   const time = new Date(message.timestamp).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
 
   return (
-    <View style={[styles.bubbleRow, isMe && styles.bubbleRowMe]}>
-      <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
-        <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>
+    <View style={[bStyles.bubbleRow, isMe && bStyles.bubbleRowMe]}>
+      <View style={[bStyles.bubble, isMe ? bStyles.bubbleMe : bStyles.bubbleOther]}>
+        <Text style={[bStyles.bubbleText, isMe && bStyles.bubbleTextMe]}>
           {message.content}
         </Text>
-        <Text style={[styles.bubbleTime, isMe && styles.bubbleTimeMe]}>{time}</Text>
+        <Text style={[bStyles.bubbleTime, isMe && bStyles.bubbleTimeMe]}>{time}</Text>
       </View>
     </View>
   );
@@ -39,6 +198,8 @@ function MessageBubble({ message, isMe }: { message: Message; isMe: boolean }) {
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { conversations, messages, sendMessage } = useAppState();
   const [inputText, setInputText] = useState('');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
@@ -73,7 +234,7 @@ export default function ChatScreen() {
     <View style={[styles.container, { paddingTop: topPadding }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={Colors.text} />
+          <Ionicons name="chevron-back" size={24} color={C.text} />
         </Pressable>
         <Pressable style={styles.chatHeader}>
           <Avatar name={conversation.participantName} size={36} showVerified={conversation.participantVerified} />
@@ -104,7 +265,7 @@ export default function ChatScreen() {
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <View style={styles.emptyChat}>
-              <Ionicons name="chatbubble-ellipses-outline" size={40} color={Colors.textTertiary} />
+              <Ionicons name="chatbubble-ellipses-outline" size={40} color={C.textTertiary} />
               <Text style={styles.emptyChatText}>Start a conversation</Text>
             </View>
           }
@@ -114,7 +275,7 @@ export default function ChatScreen() {
           <TextInput
             style={styles.textInput}
             placeholder="Type a message..."
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -132,7 +293,7 @@ export default function ChatScreen() {
             <Ionicons
               name="send"
               size={18}
-              color={inputText.trim() ? Colors.black : Colors.textTertiary}
+              color={inputText.trim() ? C.black : C.textTertiary}
             />
           </Pressable>
         </View>
@@ -140,152 +301,3 @@ export default function ChatScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    gap: 8,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatHeader: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  chatName: {
-    fontSize: 16,
-    color: Colors.text,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  chatRole: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  chatArea: {
-    flex: 1,
-  },
-  messageList: {
-    padding: 16,
-    gap: 6,
-  },
-  bubbleRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    marginBottom: 4,
-  },
-  bubbleRowMe: {
-    justifyContent: 'flex-end',
-  },
-  bubble: {
-    maxWidth: '78%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-  },
-  bubbleMe: {
-    backgroundColor: Colors.primary,
-    borderBottomRightRadius: 6,
-  },
-  bubbleOther: {
-    backgroundColor: Colors.surfaceLight,
-    borderBottomLeftRadius: 6,
-  },
-  bubbleText: {
-    fontSize: 15,
-    color: Colors.text,
-    fontFamily: 'DMSans_400Regular',
-    lineHeight: 20,
-  },
-  bubbleTextMe: {
-    color: Colors.black,
-  },
-  bubbleTime: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-    marginTop: 4,
-    alignSelf: 'flex-end',
-  },
-  bubbleTimeMe: {
-    color: 'rgba(0,0,0,0.5)',
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.background,
-    gap: 10,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: Colors.surfaceLight,
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: Colors.text,
-    fontFamily: 'DMSans_400Regular',
-    maxHeight: 100,
-  },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 1,
-  },
-  sendBtnActive: {
-    backgroundColor: Colors.primary,
-  },
-  emptyChat: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-    gap: 8,
-    transform: [{ scaleY: -1 }],
-  },
-  emptyChatText: {
-    fontSize: 14,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  notFound: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  notFoundText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  backLink: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-});

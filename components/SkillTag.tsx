@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 
 interface SkillTagProps {
   label: string;
@@ -8,7 +9,47 @@ interface SkillTagProps {
   size?: 'small' | 'medium';
 }
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    tag: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: C.surfaceLight,
+    },
+    tagPrimary: {
+      backgroundColor: 'rgba(212, 168, 83, 0.15)',
+    },
+    tagOutline: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    tagMedium: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+    },
+    tagText: {
+      fontSize: 12,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    tagTextPrimary: {
+      color: C.primary,
+    },
+    tagTextOutline: {
+      color: C.textSecondary,
+    },
+    tagTextMedium: {
+      fontSize: 14,
+    },
+  });
+}
+
 export function SkillTag({ label, variant = 'default', size = 'small' }: SkillTagProps) {
+  const C = useColors();
+  const styles = React.useMemo(() => makeStyles(C), [C]);
+
   return (
     <View style={[
       styles.tag,
@@ -27,38 +68,3 @@ export function SkillTag({ label, variant = 'default', size = 'small' }: SkillTa
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: Colors.surfaceLight,
-  },
-  tagPrimary: {
-    backgroundColor: 'rgba(212, 168, 83, 0.15)',
-  },
-  tagOutline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  tagMedium: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  tagText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  tagTextPrimary: {
-    color: Colors.primary,
-  },
-  tagTextOutline: {
-    color: Colors.textSecondary,
-  },
-  tagTextMedium: {
-    fontSize: 14,
-  },
-});

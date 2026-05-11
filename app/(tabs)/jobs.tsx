@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { CastingCallCard } from '@/components/CastingCallCard';
 import { ApplicationStatusBadge } from '@/components/StatusBadge';
@@ -29,8 +30,130 @@ const INDUSTRY_FILTERS = [
   { key: 'web_series', label: 'Web Series' },
 ];
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    header: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 12,
+    },
+    headerTitle: {
+      fontSize: 28,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    tabs: {
+      flexDirection: 'row',
+      marginHorizontal: 20,
+      marginBottom: 16,
+      backgroundColor: C.surface,
+      borderRadius: 12,
+      padding: 4,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 10,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    tabActive: {
+      backgroundColor: C.surfaceElevated,
+    },
+    tabText: {
+      fontSize: 14,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    tabTextActive: {
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    filterChip: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    filterChipActive: {
+      backgroundColor: 'rgba(212, 168, 83, 0.15)',
+      borderColor: C.primary,
+    },
+    filterText: {
+      fontSize: 13,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    filterTextActive: {
+      color: C.primary,
+    },
+    list: {
+      padding: 20,
+      gap: 14,
+    },
+    empty: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 60,
+      gap: 8,
+    },
+    emptyText: {
+      fontSize: 16,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    appCard: {
+      backgroundColor: C.surface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    appCardTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 12,
+      marginBottom: 8,
+    },
+    appTitle: {
+      fontSize: 16,
+      color: C.text,
+      fontFamily: 'DMSans_600SemiBold',
+      flex: 1,
+    },
+    appDate: {
+      fontSize: 13,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    appNote: {
+      fontSize: 13,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+      fontStyle: 'italic',
+      marginTop: 6,
+    },
+  });
+}
+
 export default function JobsScreen() {
   const insets = useSafeAreaInsets();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { castingCalls, applications } = useAppState();
   const [viewMode, setViewMode] = useState<ViewMode>('browse');
   const [industryFilter, setIndustryFilter] = useState('all');
@@ -66,7 +189,7 @@ export default function JobsScreen() {
           <Ionicons
             name="compass-outline"
             size={18}
-            color={viewMode === 'browse' ? Colors.primary : Colors.textTertiary}
+            color={viewMode === 'browse' ? C.primary : C.textTertiary}
           />
           <Text style={[styles.tabText, viewMode === 'browse' && styles.tabTextActive]}>
             Browse
@@ -82,7 +205,7 @@ export default function JobsScreen() {
           <Ionicons
             name="document-text-outline"
             size={18}
-            color={viewMode === 'applied' ? Colors.primary : Colors.textTertiary}
+            color={viewMode === 'applied' ? C.primary : C.textTertiary}
           />
           <Text style={[styles.tabText, viewMode === 'applied' && styles.tabTextActive]}>
             My Applications
@@ -134,7 +257,7 @@ export default function JobsScreen() {
           scrollEnabled={!!filteredCalls.length}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="film-outline" size={48} color={Colors.textTertiary} />
+              <Ionicons name="film-outline" size={48} color={C.textTertiary} />
               <Text style={styles.emptyText}>No casting calls found</Text>
               <Text style={styles.emptySubtext}>Check back later for new opportunities</Text>
             </View>
@@ -170,7 +293,7 @@ export default function JobsScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="document-outline" size={48} color={Colors.textTertiary} />
+              <Ionicons name="document-outline" size={48} color={C.textTertiary} />
               <Text style={styles.emptyText}>No applications yet</Text>
               <Text style={styles.emptySubtext}>Start applying to casting calls</Text>
             </View>
@@ -180,121 +303,3 @@ export default function JobsScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 28,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  tabs: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  tabActive: {
-    backgroundColor: Colors.surfaceElevated,
-  },
-  tabText: {
-    fontSize: 14,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  tabTextActive: {
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: 'rgba(212, 168, 83, 0.15)',
-    borderColor: Colors.primary,
-  },
-  filterText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  filterTextActive: {
-    color: Colors.primary,
-  },
-  list: {
-    padding: 20,
-    gap: 14,
-  },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-    gap: 8,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  appCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  appCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 8,
-  },
-  appTitle: {
-    fontSize: 16,
-    color: Colors.text,
-    fontFamily: 'DMSans_600SemiBold',
-    flex: 1,
-  },
-  appDate: {
-    fontSize: 13,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  appNote: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    fontStyle: 'italic',
-    marginTop: 6,
-  },
-});

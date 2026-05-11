@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { CastingCallCard } from '@/components/CastingCallCard';
 import { TalentCard } from '@/components/TalentCard';
@@ -19,8 +20,132 @@ import { ApplicationStatusBadge } from '@/components/StatusBadge';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    headerSection: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 20,
+    },
+    greeting: {
+      fontSize: 14,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    userName: {
+      fontSize: 26,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+      marginTop: 2,
+    },
+    notifBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: C.surfaceLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statsCard: {
+      marginHorizontal: 20,
+      borderRadius: 16,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: 'rgba(212, 168, 83, 0.2)',
+      marginBottom: 8,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    statItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    statNumber: {
+      fontSize: 24,
+      color: C.primary,
+      fontFamily: 'DMSans_700Bold',
+    },
+    statLabel: {
+      fontSize: 12,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+      marginTop: 4,
+    },
+    statDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: C.border,
+    },
+    section: {
+      marginTop: 24,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      marginBottom: 14,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+      paddingHorizontal: 20,
+      marginBottom: 14,
+    },
+    seeAll: {
+      fontSize: 14,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    callsList: {
+      paddingHorizontal: 20,
+      gap: 14,
+    },
+    appItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      backgroundColor: C.surface,
+      marginHorizontal: 20,
+      borderRadius: 12,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    appInfo: {
+      flex: 1,
+      marginRight: 12,
+    },
+    appTitle: {
+      fontSize: 14,
+      color: C.text,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    appDate: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+      marginTop: 2,
+    },
+  });
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { myProfile, profiles, castingCalls, applications } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
@@ -47,7 +172,7 @@ export default function HomeScreen() {
             }}
           >
             <View style={styles.notifBtn}>
-              <Ionicons name="notifications-outline" size={22} color={Colors.text} />
+              <Ionicons name="notifications-outline" size={22} color={C.text} />
             </View>
           </Pressable>
         </View>
@@ -132,123 +257,3 @@ export default function HomeScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  headerSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-  greeting: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  userName: {
-    fontSize: 26,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-    marginTop: 2,
-  },
-  notifBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsCard: {
-    marginHorizontal: 20,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 168, 83, 0.2)',
-    marginBottom: 8,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    color: Colors.primary,
-    fontFamily: 'DMSans_700Bold',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: Colors.border,
-  },
-  section: {
-    marginTop: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-    paddingHorizontal: 20,
-    marginBottom: 14,
-  },
-  seeAll: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  callsList: {
-    paddingHorizontal: 20,
-    gap: 14,
-  },
-  appItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  appInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  appTitle: {
-    fontSize: 14,
-    color: Colors.text,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  appDate: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-    marginTop: 2,
-  },
-});

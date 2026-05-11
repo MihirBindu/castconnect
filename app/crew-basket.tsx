@@ -11,14 +11,243 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 import { CrewRole, UserProfile } from '@/lib/types';
 import * as Haptics from 'expo-haptics';
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 12,
+    },
+    backBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: C.surfaceLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerCenter: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: 20,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    headerSub: {
+      fontSize: 12,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    clearBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    },
+    clearBtnText: {
+      fontSize: 13,
+      color: '#FF3B30',
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    empty: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 40,
+      gap: 12,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+      textAlign: 'center',
+    },
+    emptyText: {
+      fontSize: 14,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    browseBtn: {
+      marginTop: 8,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: C.primary,
+    },
+    browseBtnText: {
+      fontSize: 14,
+      color: C.background,
+      fontFamily: 'DMSans_700Bold',
+    },
+    summary: {
+      flexDirection: 'row',
+      marginHorizontal: 20,
+      backgroundColor: C.surface,
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: C.border,
+      marginBottom: 12,
+    },
+    summaryItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    summaryValue: {
+      fontSize: 22,
+      color: C.primary,
+      fontFamily: 'DMSans_700Bold',
+    },
+    summaryLabel: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+      marginTop: 2,
+    },
+    summaryDivider: {
+      width: 1,
+      backgroundColor: C.border,
+    },
+    listContent: {
+      paddingHorizontal: 20,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 16,
+      paddingBottom: 8,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      color: C.primary,
+      fontFamily: 'DMSans_700Bold',
+    },
+    sectionCount: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+      backgroundColor: C.surfaceLight,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    memberCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: C.surface,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    memberInfo: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    memberDetails: {
+      flex: 1,
+    },
+    memberName: {
+      fontSize: 14,
+      color: C.text,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    memberTitle: {
+      fontSize: 12,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+      marginTop: 1,
+    },
+    memberMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 3,
+    },
+    ratingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    ratingText: {
+      fontSize: 11,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    memberRate: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    removeBtn: {
+      padding: 6,
+    },
+    bottomBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      backgroundColor: C.surface,
+      borderTopWidth: 1,
+      borderTopColor: C.border,
+    },
+    bottomInfo: {},
+    bottomTotal: {
+      fontSize: 15,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    bottomMembers: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    reviewBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: C.primary,
+    },
+    reviewBtnText: {
+      fontSize: 14,
+      color: C.background,
+      fontFamily: 'DMSans_700Bold',
+    },
+  });
+}
+
 export default function CrewBasketScreen() {
   const insets = useSafeAreaInsets();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const {
     crewBasket,
     profiles,
@@ -105,7 +334,7 @@ export default function CrewBasketScreen() {
     <View style={[styles.container, { paddingTop: topPadding }]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} testID="back-btn">
-          <Ionicons name="arrow-back" size={22} color={Colors.text} />
+          <Ionicons name="arrow-back" size={22} color={C.text} />
         </Pressable>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Crew Basket</Text>
@@ -120,7 +349,7 @@ export default function CrewBasketScreen() {
 
       {crewBasket.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="people-outline" size={56} color={Colors.textTertiary} />
+          <Ionicons name="people-outline" size={56} color={C.textTertiary} />
           <Text style={styles.emptyTitle}>Your crew basket is empty</Text>
           <Text style={styles.emptyText}>
             Browse professionals on the Discover tab and add them to your crew
@@ -172,7 +401,7 @@ export default function CrewBasketScreen() {
                     <Text style={styles.memberTitle}>{item.profile.title}</Text>
                     <View style={styles.memberMeta}>
                       <View style={styles.ratingRow}>
-                        <Ionicons name="star" size={10} color={Colors.primary} />
+                        <Ionicons name="star" size={10} color={C.primary} />
                         <Text style={styles.ratingText}>{item.profile.rating.toFixed(1)}</Text>
                       </View>
                       <Text style={styles.memberRate}>
@@ -186,7 +415,7 @@ export default function CrewBasketScreen() {
                   style={styles.removeBtn}
                   testID={`remove-${item.profileId}`}
                 >
-                  <Ionicons name="close-circle" size={22} color={Colors.accentRed} />
+                  <Ionicons name="close-circle" size={22} color="#FF3B30" />
                 </Pressable>
               </View>
             )}
@@ -215,7 +444,7 @@ export default function CrewBasketScreen() {
               testID="review-team-btn"
             >
               <Text style={styles.reviewBtnText}>Review Team</Text>
-              <Ionicons name="arrow-forward" size={16} color={Colors.background} />
+              <Ionicons name="arrow-forward" size={16} color={C.background} />
             </Pressable>
           </View>
         </>
@@ -223,227 +452,3 @@ export default function CrewBasketScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerCenter: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  headerSub: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  clearBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 59, 48, 0.1)',
-  },
-  clearBtnText: {
-    fontSize: 13,
-    color: Colors.accentRed,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-    textAlign: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  browseBtn: {
-    marginTop: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-  },
-  browseBtnText: {
-    fontSize: 14,
-    color: Colors.background,
-    fontFamily: 'DMSans_700Bold',
-  },
-  summary: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 12,
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  summaryValue: {
-    fontSize: 22,
-    color: Colors.primary,
-    fontFamily: 'DMSans_700Bold',
-  },
-  summaryLabel: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-    marginTop: 2,
-  },
-  summaryDivider: {
-    width: 1,
-    backgroundColor: Colors.border,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    color: Colors.primary,
-    fontFamily: 'DMSans_700Bold',
-  },
-  sectionCount: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-    backgroundColor: Colors.surfaceLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  memberCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  memberInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  memberDetails: {
-    flex: 1,
-  },
-  memberName: {
-    fontSize: 14,
-    color: Colors.text,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  memberTitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    marginTop: 1,
-  },
-  memberMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 3,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  ratingText: {
-    fontSize: 11,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  memberRate: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  removeBtn: {
-    padding: 6,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  bottomInfo: {},
-  bottomTotal: {
-    fontSize: 15,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  bottomMembers: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  reviewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-  },
-  reviewBtnText: {
-    fontSize: 14,
-    color: Colors.background,
-    fontFamily: 'DMSans_700Bold',
-  },
-});
