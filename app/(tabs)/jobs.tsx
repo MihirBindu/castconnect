@@ -78,17 +78,19 @@ function makeStyles(C: ThemeColors) {
       fontFamily: 'DMSans_600SemiBold',
     },
     filterRow: {
+      height: 48,
       paddingHorizontal: 20,
       marginBottom: 6,
     },
     filterRowContent: {
-      gap: 6,
+      gap: 8,
       flexDirection: 'row',
       alignItems: 'center',
+      paddingVertical: 8,
     },
     filterChip: {
-      height: 32,
-      paddingHorizontal: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 6,
       borderRadius: 16,
       backgroundColor: C.surfaceLight,
       alignItems: 'center',
@@ -99,12 +101,12 @@ function makeStyles(C: ThemeColors) {
     },
     filterText: {
       fontSize: 13,
+      lineHeight: 20,
       color: C.textTertiary,
-      fontFamily: 'DMSans_500Medium',
+      fontFamily: 'DMSans_600SemiBold',
     },
     filterTextActive: {
       color: C.background,
-      fontFamily: 'DMSans_700Bold',
     },
     list: {
       padding: 20,
