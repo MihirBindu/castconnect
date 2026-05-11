@@ -10,7 +10,7 @@ import Colors from '@/constants/colors';
 
 const log = createLogger('LoginScreen');
 
-function authErrorMessage(code: string | undefined, fallback: string): string {
+function authErrorMessage(code: string | undefined, message: string): string {
   switch (code) {
     case 'invalid_credentials':      return 'Email or password is incorrect.';
     case 'email_not_confirmed':      return 'Please confirm your email address before signing in.';
@@ -20,7 +20,12 @@ function authErrorMessage(code: string | undefined, fallback: string): string {
     case 'user_banned':              return 'This account has been suspended. Contact support.';
     case 'session_not_found':        return 'Your session has expired. Please sign in again.';
     case 'database_querying_schema': return 'Database not set up yet. Run schema.sql in Supabase first.';
-    default:                         return fallback;
+    case 'unexpected_failure':
+      if (message.toLowerCase().includes('database')) {
+        return 'Database error during sign-in. Auth identity records may be missing — run the identities fix SQL in Supabase.';
+      }
+      return 'An unexpected error occurred. Please try again.';
+    default:                         return message;
   }
 }
 
