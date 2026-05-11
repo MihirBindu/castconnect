@@ -339,6 +339,7 @@ export default function JobsScreen() {
 
       {viewMode === 'browse' ? (
         <FlatList
+          style={{ flex: 1 }}
           data={filteredCalls}
           renderItem={renderCallItem}
           keyExtractor={item => item.id}
@@ -358,6 +359,7 @@ export default function JobsScreen() {
         />
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={applications}
           keyExtractor={item => item.id}
           contentContainerStyle={[
