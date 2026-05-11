@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { UserProfile } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/mock-data';
 import { Avatar } from './Avatar';
@@ -15,7 +16,106 @@ interface TalentCardProps {
   compact?: boolean;
 }
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: C.surface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    cardPressed: {
+      opacity: 0.85,
+      transform: [{ scale: 0.98 }],
+    },
+    top: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 12,
+    },
+    info: {
+      flex: 1,
+    },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    name: {
+      fontSize: 16,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    title: {
+      fontSize: 13,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+      marginTop: 2,
+    },
+    locationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      marginTop: 3,
+    },
+    location: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    skills: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginBottom: 12,
+    },
+    bottom: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    roleBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: 'rgba(212, 168, 83, 0.12)',
+    },
+    roleText: {
+      fontSize: 12,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    exp: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    compactCard: {
+      alignItems: 'center',
+      width: 100,
+      gap: 6,
+    },
+    compactName: {
+      fontSize: 13,
+      color: C.text,
+      fontFamily: 'DMSans_600SemiBold',
+      textAlign: 'center',
+    },
+    compactTitle: {
+      fontSize: 11,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+      textAlign: 'center',
+    },
+  });
+}
+
 export function TalentCard({ profile, compact }: TalentCardProps) {
+  const C = useColors();
+  const styles = React.useMemo(() => makeStyles(C), [C]);
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname: '/profile/[id]', params: { id: profile.id } });
@@ -47,7 +147,7 @@ export function TalentCard({ profile, compact }: TalentCardProps) {
           </View>
           <Text style={styles.title} numberOfLines={1}>{profile.title}</Text>
           <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={12} color={Colors.textTertiary} />
+            <Ionicons name="location-outline" size={12} color={C.textTertiary} />
             <Text style={styles.location}>{profile.location}</Text>
           </View>
         </View>
@@ -72,97 +172,3 @@ export function TalentCard({ profile, compact }: TalentCardProps) {
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  cardPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  top: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
-  },
-  info: {
-    flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  name: {
-    fontSize: 16,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  title: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-    marginTop: 2,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 3,
-  },
-  location: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  skills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 12,
-  },
-  bottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  roleBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: 'rgba(212, 168, 83, 0.12)',
-  },
-  roleText: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  exp: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  compactCard: {
-    alignItems: 'center',
-    width: 100,
-    gap: 6,
-  },
-  compactName: {
-    fontSize: 13,
-    color: Colors.text,
-    fontFamily: 'DMSans_600SemiBold',
-    textAlign: 'center',
-  },
-  compactTitle: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    textAlign: 'center',
-  },
-});

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,67 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { ConversationItem } from '@/components/ConversationItem';
 import { Conversation } from '@/lib/types';
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    header: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: 28,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    unreadCount: {
+      fontSize: 13,
+      color: C.primary,
+      fontFamily: 'DMSans_500Medium',
+      marginTop: 2,
+    },
+    separator: {
+      height: 1,
+      backgroundColor: C.border,
+      marginLeft: 86,
+    },
+    empty: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 80,
+      gap: 8,
+    },
+    emptyText: {
+      fontSize: 16,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+      textAlign: 'center',
+      paddingHorizontal: 40,
+    },
+  });
+}
+
 export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { conversations } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
@@ -58,7 +112,7 @@ export default function MessagesScreen() {
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={48} color={Colors.textTertiary} />
+            <Ionicons name="chatbubbles-outline" size={48} color={C.textTertiary} />
             <Text style={styles.emptyText}>No messages yet</Text>
             <Text style={styles.emptySubtext}>Start connecting with industry professionals</Text>
           </View>
@@ -67,52 +121,3 @@ export default function MessagesScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 28,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  unreadCount: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontFamily: 'DMSans_500Medium',
-    marginTop: 2,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginLeft: 86,
-  },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-    gap: 8,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
-});

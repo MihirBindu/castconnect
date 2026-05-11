@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 
 interface AvatarProps {
   name: string;
@@ -28,36 +29,44 @@ function getAvatarColor(name: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    initials: {
+      color: '#FFFFFF',
+      fontFamily: 'DMSans_700Bold',
+    },
+    badge: {
+      position: 'absolute',
+      backgroundColor: C.background,
+      borderRadius: 20,
+    },
+  });
+}
+
 export function Avatar({ name, size = 44, image, showVerified }: AvatarProps) {
+  const C = useColors();
+  const styles = React.useMemo(() => makeStyles(C), [C]);
   const bgColor = getAvatarColor(name);
   const fontSize = size * 0.38;
 
   return (
     <View style={{ position: 'relative' }}>
       <View style={[styles.container, { width: size, height: size, borderRadius: size / 2, backgroundColor: bgColor }]}>
-        <Text style={[styles.initials, { fontSize }]}>{getInitials(name)}</Text>
+        {image ? (
+          <Image source={{ uri: image }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+        ) : (
+          <Text style={[styles.initials, { fontSize }]}>{getInitials(name)}</Text>
+        )}
       </View>
       {showVerified && (
         <View style={[styles.badge, { right: -2, bottom: -2 }]}>
-          <Ionicons name="checkmark-circle" size={size * 0.38} color={Colors.primary} />
+          <Ionicons name="checkmark-circle" size={size * 0.38} color={C.primary} />
         </View>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initials: {
-    color: '#FFFFFF',
-    fontFamily: 'DMSans_700Bold',
-  },
-  badge: {
-    position: 'absolute',
-    backgroundColor: Colors.background,
-    borderRadius: 20,
-  },
-});

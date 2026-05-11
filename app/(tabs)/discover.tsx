@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 import { SkillTag } from '@/components/SkillTag';
@@ -36,8 +38,441 @@ const EXPERIENCE_OPTIONS: { key: ExperienceFilter; label: string }[] = [
 
 const LOCATIONS = ['All Locations', 'Mumbai, India', 'Delhi, India', 'Chennai, India', 'Hyderabad, India', 'Bangalore, India', 'Pune, India', 'Goa, India'];
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    header: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 8,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    headerTitle: {
+      fontSize: 26,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    headerSub: {
+      fontSize: 13,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+      marginTop: 2,
+    },
+    basketBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(212, 168, 83, 0.12)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    basketBadge: {
+      position: 'absolute',
+      top: -2,
+      right: -2,
+      backgroundColor: '#FF3B30',
+      borderRadius: 10,
+      minWidth: 18,
+      height: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    basketBadgeText: {
+      fontSize: 10,
+      color: '#FFFFFF',
+      fontFamily: 'DMSans_700Bold',
+    },
+    searchRow: {
+      flexDirection: 'row',
+      paddingHorizontal: 20,
+      gap: 8,
+      marginBottom: 8,
+    },
+    searchContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: C.surfaceLight,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      height: 40,
+      gap: 8,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      color: C.text,
+      fontFamily: 'DMSans_400Regular',
+      height: '100%',
+    },
+    filterBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 10,
+      backgroundColor: C.surfaceLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    filterBadge: {
+      position: 'absolute',
+      top: 2,
+      right: 2,
+      backgroundColor: C.primary,
+      borderRadius: 9,
+      minWidth: 18,
+      height: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    filterBadgeText: {
+      fontSize: 11,
+      color: C.background,
+      fontFamily: 'DMSans_700Bold',
+    },
+    roleSection: {
+      paddingLeft: 20,
+      marginBottom: 6,
+    },
+    roleSectionLabel: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_500Medium',
+      marginBottom: 6,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    roleChips: {
+      gap: 6,
+      paddingRight: 20,
+    },
+    roleChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    roleChipActive: {
+      backgroundColor: 'rgba(212, 168, 83, 0.15)',
+      borderColor: C.primary,
+    },
+    roleChipText: {
+      fontSize: 12,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    roleChipTextActive: {
+      color: C.primary,
+    },
+    sortRow: {
+      flexDirection: 'column',
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 4,
+      gap: 8,
+    },
+    resultCount: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    sortChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 12,
+      backgroundColor: C.surface,
+    },
+    sortChipActive: {
+      backgroundColor: 'rgba(212, 168, 83, 0.12)',
+    },
+    sortChipText: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    sortChipTextActive: {
+      color: C.primary,
+    },
+    list: {
+      padding: 20,
+      paddingTop: 4,
+      gap: 10,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 12,
+      paddingBottom: 4,
+    },
+    sectionTitle: {
+      fontSize: 17,
+      color: C.primary,
+      fontFamily: 'DMSans_700Bold',
+    },
+    sectionCount: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    profileCard: {
+      backgroundColor: C.surface,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    cardPressed: {
+      opacity: 0.75,
+      transform: [{ scale: 0.98 }],
+    },
+    cardTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 10,
+    },
+    cardInfo: {
+      flex: 1,
+    },
+    cardName: {
+      fontSize: 15,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    cardTitle: {
+      fontSize: 12,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+      marginTop: 1,
+    },
+    cardMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      marginTop: 2,
+    },
+    cardLocation: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    cardRight: {
+      alignItems: 'flex-end',
+      gap: 6,
+    },
+    ratingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
+    ratingText: {
+      fontSize: 12,
+      color: C.primary,
+      fontFamily: 'DMSans_700Bold',
+    },
+    reviewText: {
+      fontSize: 10,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    cardSkills: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 4,
+      marginBottom: 10,
+    },
+    cardBottom: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    cardStats: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    cardRate: {
+      fontSize: 13,
+      color: C.text,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    dot: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: C.textTertiary,
+    },
+    cardExp: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    addCrewBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: 'rgba(212, 168, 83, 0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(212, 168, 83, 0.2)',
+    },
+    addCrewBtnActive: {
+      backgroundColor: 'rgba(52, 199, 89, 0.1)',
+      borderColor: 'rgba(52, 199, 89, 0.3)',
+    },
+    addCrewText: {
+      fontSize: 12,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    addCrewTextActive: {
+      color: '#34C759',
+    },
+    empty: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 60,
+      gap: 8,
+    },
+    emptyText: {
+      fontSize: 16,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    emptySubtext: {
+      fontSize: 13,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    floatingBasket: {
+      position: 'absolute',
+      left: 20,
+      right: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 14,
+      backgroundColor: C.primary,
+      boxShadow: '0px 4px 20px rgba(212, 168, 83, 0.4)',
+    },
+    floatingBasketText: {
+      fontSize: 15,
+      color: C.background,
+      fontFamily: 'DMSans_700Bold',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: C.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingTop: 20,
+      paddingHorizontal: 20,
+      maxHeight: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    modalTitle: {
+      fontSize: 20,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    filterLabel: {
+      fontSize: 14,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_600SemiBold',
+      marginBottom: 10,
+      marginTop: 16,
+    },
+    filterOptions: {
+      gap: 8,
+      paddingBottom: 4,
+    },
+    filterOptionsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    filterOption: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: C.surfaceLight,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    filterOptionActive: {
+      backgroundColor: 'rgba(212, 168, 83, 0.15)',
+      borderColor: C.primary,
+    },
+    filterOptionText: {
+      fontSize: 13,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    filterOptionTextActive: {
+      color: C.primary,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 20,
+    },
+    clearBtn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      backgroundColor: C.surfaceLight,
+    },
+    clearBtnText: {
+      fontSize: 14,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    applyBtn: {
+      flex: 2,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      backgroundColor: C.primary,
+    },
+    applyBtnText: {
+      fontSize: 14,
+      color: C.background,
+      fontFamily: 'DMSans_700Bold',
+    },
+  });
+}
+
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { profiles, crewBasket, addToCrewBasket, isInCrewBasket } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<CrewRole[]>([]);
@@ -133,8 +568,8 @@ export default function DiscoverScreen() {
 
   const formatRate = (rate: number) => {
     if (rate === 0) return 'N/A';
-    if (rate >= 100000) return `${(rate / 100000).toFixed(1)}L/day`;
-    return `${(rate / 1000).toFixed(0)}K/day`;
+    if (rate >= 100000) return `₹${(rate / 100000).toFixed(1)}L/day`;
+    return `₹${(rate / 1000).toFixed(0)}K/day`;
   };
 
   const renderProfileCard = useCallback(({ item }: { item: UserProfile }) => {
@@ -154,13 +589,13 @@ export default function DiscoverScreen() {
             <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
             <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
             <View style={styles.cardMeta}>
-              <Ionicons name="location-outline" size={11} color={Colors.textTertiary} />
+              <Ionicons name="location-outline" size={11} color={C.textTertiary} />
               <Text style={styles.cardLocation}>{item.location}</Text>
             </View>
           </View>
           <View style={styles.cardRight}>
             <View style={styles.ratingRow}>
-              <Ionicons name="star" size={12} color={Colors.primary} />
+              <Ionicons name="star" size={12} color={C.primary} />
               <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
               <Text style={styles.reviewText}>({item.reviewCount})</Text>
             </View>
@@ -192,7 +627,7 @@ export default function DiscoverScreen() {
             <Ionicons
               name={inBasket ? 'checkmark-circle' : 'add-circle-outline'}
               size={16}
-              color={inBasket ? Colors.accentGreen : Colors.primary}
+              color={inBasket ? '#34C759' : C.primary}
             />
             <Text style={[styles.addCrewText, inBasket && styles.addCrewTextActive]}>
               {inBasket ? 'Added' : 'Add to Crew'}
@@ -201,7 +636,7 @@ export default function DiscoverScreen() {
         </View>
       </Pressable>
     );
-  }, [isInCrewBasket, handleAddToCrew]);
+  }, [isInCrewBasket, handleAddToCrew, styles, C]);
 
   const renderSectionHeader = (role: string, count: number) => (
     <View style={styles.sectionHeader} key={`header-${role}`}>
@@ -240,7 +675,7 @@ export default function DiscoverScreen() {
               }}
               style={styles.basketBtn}
             >
-              <Ionicons name="people" size={20} color={Colors.primary} />
+              <Ionicons name="people" size={20} color={C.primary} />
               <View style={styles.basketBadge}>
                 <Text style={styles.basketBadgeText}>{crewBasket.length}</Text>
               </View>
@@ -251,18 +686,18 @@ export default function DiscoverScreen() {
 
       <View style={styles.searchRow}>
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={16} color={Colors.textTertiary} />
+          <Ionicons name="search" size={16} color={C.textTertiary} />
           <TextInput
             testID="search-input"
             style={styles.searchInput}
             placeholder="Search by name, skill, role..."
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <Pressable onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={16} color={Colors.textTertiary} />
+              <Ionicons name="close-circle" size={16} color={C.textTertiary} />
             </Pressable>
           )}
         </View>
@@ -274,7 +709,7 @@ export default function DiscoverScreen() {
           }}
           style={styles.filterBtn}
         >
-          <Ionicons name="options-outline" size={18} color={activeFilterCount > 0 ? Colors.primary : Colors.textSecondary} />
+          <Ionicons name="options-outline" size={18} color={activeFilterCount > 0 ? C.primary : C.textSecondary} />
           {activeFilterCount > 0 && (
             <View style={styles.filterBadge}>
               <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
@@ -285,24 +720,33 @@ export default function DiscoverScreen() {
 
       <View style={styles.roleSection}>
         <Text style={styles.roleSectionLabel}>Select roles to hire</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roleChips}>
-          {ALL_CREW_ROLES.map(role => {
-            const selected = selectedRoles.includes(role);
-            return (
-              <Pressable
-                key={role}
-                testID={`role-chip-${role}`}
-                onPress={() => toggleRole(role)}
-                style={[styles.roleChip, selected && styles.roleChipActive]}
-              >
-                <Text style={[styles.roleChipText, selected && styles.roleChipTextActive]}>
-                  {role}
-                </Text>
-                {selected && <Ionicons name="checkmark" size={14} color={Colors.primary} style={{ marginLeft: 2 }} />}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <View style={{ overflow: 'hidden' }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.roleChips}>
+            {ALL_CREW_ROLES.map(role => {
+              const selected = selectedRoles.includes(role);
+              return (
+                <Pressable
+                  key={role}
+                  testID={`role-chip-${role}`}
+                  onPress={() => toggleRole(role)}
+                  style={[styles.roleChip, selected && styles.roleChipActive]}
+                >
+                  <Text style={[styles.roleChipText, selected && styles.roleChipTextActive]}>
+                    {role}
+                  </Text>
+                  {selected && <Ionicons name="checkmark" size={14} color={C.primary} style={{ marginLeft: 2 }} />}
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <LinearGradient
+            colors={['transparent', C.background]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 40 }}
+            pointerEvents="none"
+          />
+        </View>
       </View>
 
       <View style={styles.sortRow}>
@@ -332,6 +776,7 @@ export default function DiscoverScreen() {
         </ScrollView>
       </View>
 
+
       <FlatList
         data={flatData}
         renderItem={({ item }) => {
@@ -346,10 +791,10 @@ export default function DiscoverScreen() {
           { paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 },
         ]}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={!!flatData.length}
+        scrollEnabled={true}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="people-outline" size={48} color={Colors.textTertiary} />
+            <Ionicons name="people-outline" size={48} color={C.textTertiary} />
             <Text style={styles.emptyText}>No professionals found</Text>
             <Text style={styles.emptySubtext}>Adjust your filters or role selection</Text>
           </View>
@@ -365,21 +810,22 @@ export default function DiscoverScreen() {
           }}
           style={[styles.floatingBasket, { bottom: Platform.OS === 'web' ? 84 + 34 + 16 : 100 + 16 }]}
         >
-          <Ionicons name="people" size={20} color={Colors.background} />
+          <Ionicons name="people" size={20} color={C.background} />
           <Text style={styles.floatingBasketText}>
             View Crew ({crewBasket.length})
           </Text>
-          <Ionicons name="arrow-forward" size={16} color={Colors.background} />
+          <Ionicons name="arrow-forward" size={16} color={C.background} />
         </Pressable>
       )}
 
       <Modal visible={showFilters} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { paddingBottom: Platform.OS === 'web' ? 34 : insets.bottom + 16 }]}>
+            <View style={{ width: 36, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 12 }} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
               <Pressable onPress={() => setShowFilters(false)}>
-                <Ionicons name="close" size={24} color={Colors.text} />
+                <Ionicons name="close" size={24} color={C.text} />
               </Pressable>
             </View>
 
@@ -467,432 +913,3 @@ export default function DiscoverScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerTitle: {
-    fontSize: 26,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  headerSub: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    marginTop: 2,
-  },
-  basketBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(212, 168, 83, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  basketBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: Colors.accentRed,
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  basketBadgeText: {
-    fontSize: 10,
-    color: Colors.white,
-    fontFamily: 'DMSans_700Bold',
-  },
-  searchRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 8,
-    marginBottom: 8,
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surfaceLight,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    height: 40,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: Colors.text,
-    fontFamily: 'DMSans_400Regular',
-    height: '100%',
-  },
-  filterBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: Colors.primary,
-    borderRadius: 6,
-    width: 12,
-    height: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterBadgeText: {
-    fontSize: 8,
-    color: Colors.background,
-    fontFamily: 'DMSans_700Bold',
-  },
-  roleSection: {
-    paddingLeft: 20,
-    marginBottom: 6,
-  },
-  roleSectionLabel: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_500Medium',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  roleChips: {
-    gap: 6,
-    paddingRight: 20,
-  },
-  roleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  roleChipActive: {
-    backgroundColor: 'rgba(212, 168, 83, 0.15)',
-    borderColor: Colors.primary,
-  },
-  roleChipText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  roleChipTextActive: {
-    color: Colors.primary,
-  },
-  sortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    gap: 10,
-  },
-  resultCount: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_500Medium',
-    minWidth: 90,
-  },
-  sortChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    backgroundColor: Colors.surface,
-  },
-  sortChipActive: {
-    backgroundColor: 'rgba(212, 168, 83, 0.12)',
-  },
-  sortChipText: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  sortChipTextActive: {
-    color: Colors.primary,
-  },
-  list: {
-    padding: 20,
-    paddingTop: 4,
-    gap: 10,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    color: Colors.primary,
-    fontFamily: 'DMSans_700Bold',
-  },
-  sectionCount: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  profileCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  cardPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  cardName: {
-    fontSize: 15,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  cardTitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-    marginTop: 1,
-  },
-  cardMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 2,
-  },
-  cardLocation: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  cardRight: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  ratingText: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontFamily: 'DMSans_700Bold',
-  },
-  reviewText: {
-    fontSize: 10,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  cardSkills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-    marginBottom: 10,
-  },
-  cardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  cardRate: {
-    fontSize: 13,
-    color: Colors.text,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Colors.textTertiary,
-  },
-  cardExp: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  addCrewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(212, 168, 83, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(212, 168, 83, 0.2)',
-  },
-  addCrewBtnActive: {
-    backgroundColor: 'rgba(52, 199, 89, 0.1)',
-    borderColor: 'rgba(52, 199, 89, 0.3)',
-  },
-  addCrewText: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  addCrewTextActive: {
-    color: Colors.accentGreen,
-  },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-    gap: 8,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  emptySubtext: {
-    fontSize: 13,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  floatingBasket: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: Colors.primary,
-    boxShadow: '0px 4px 20px rgba(212, 168, 83, 0.4)',
-  },
-  floatingBasketText: {
-    fontSize: 15,
-    color: Colors.background,
-    fontFamily: 'DMSans_700Bold',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 20,
-    paddingHorizontal: 20,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  filterLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-    marginBottom: 10,
-    marginTop: 16,
-  },
-  filterOptions: {
-    gap: 8,
-    paddingBottom: 4,
-  },
-  filterOptionsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  filterOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: Colors.surfaceLight,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  filterOptionActive: {
-    backgroundColor: 'rgba(212, 168, 83, 0.15)',
-    borderColor: Colors.primary,
-  },
-  filterOptionText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  filterOptionTextActive: {
-    color: Colors.primary,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-  },
-  clearBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: Colors.surfaceLight,
-  },
-  clearBtnText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  applyBtn: {
-    flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
-  },
-  applyBtnText: {
-    fontSize: 14,
-    color: Colors.background,
-    fontFamily: 'DMSans_700Bold',
-  },
-});

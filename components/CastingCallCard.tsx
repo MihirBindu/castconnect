@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { CastingCall } from '@/lib/types';
 import { INDUSTRY_LABELS } from '@/lib/mock-data';
 import { SkillTag } from './SkillTag';
@@ -25,7 +26,134 @@ function formatTimeAgo(dateStr: string): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: C.surface,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    cardPressed: {
+      opacity: 0.85,
+      transform: [{ scale: 0.98 }],
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    typeBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      backgroundColor: 'rgba(212, 168, 83, 0.12)',
+    },
+    typeText: {
+      fontSize: 11,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    openBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    openDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#34C759',
+    },
+    openText: {
+      fontSize: 11,
+      color: '#34C759',
+      fontFamily: 'DMSans_500Medium',
+    },
+    timeAgo: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    title: {
+      fontSize: 17,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+      lineHeight: 22,
+      marginBottom: 6,
+    },
+    description: {
+      fontSize: 14,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+      lineHeight: 20,
+      marginBottom: 12,
+    },
+    meta: {
+      flexDirection: 'row',
+      gap: 16,
+      marginBottom: 12,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    metaText: {
+      fontSize: 13,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    skills: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginBottom: 12,
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: C.border,
+    },
+    postedBy: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    postedByText: {
+      fontSize: 13,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    applicants: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    applicantText: {
+      fontSize: 13,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+  });
+}
+
 export function CastingCallCard({ item, compact }: CastingCallCardProps) {
+  const C = useColors();
+  const styles = React.useMemo(() => makeStyles(C), [C]);
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname: '/casting/[id]', params: { id: item.id } });
@@ -59,11 +187,11 @@ export function CastingCallCard({ item, compact }: CastingCallCardProps) {
 
       <View style={styles.meta}>
         <View style={styles.metaItem}>
-          <Ionicons name="briefcase-outline" size={14} color={Colors.textSecondary} />
+          <Ionicons name="briefcase-outline" size={14} color={C.textSecondary} />
           <Text style={styles.metaText}>{item.roleNeeded}</Text>
         </View>
         <View style={styles.metaItem}>
-          <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
+          <Ionicons name="location-outline" size={14} color={C.textSecondary} />
           <Text style={styles.metaText} numberOfLines={1}>{item.location}</Text>
         </View>
       </View>
@@ -82,137 +210,15 @@ export function CastingCallCard({ item, compact }: CastingCallCardProps) {
       <View style={styles.footer}>
         <View style={styles.postedBy}>
           {item.postedByVerified && (
-            <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
+            <Ionicons name="checkmark-circle" size={14} color={C.primary} />
           )}
           <Text style={styles.postedByText}>{item.postedByName}</Text>
         </View>
         <View style={styles.applicants}>
-          <MaterialCommunityIcons name="account-group-outline" size={16} color={Colors.textTertiary} />
+          <MaterialCommunityIcons name="account-group-outline" size={16} color={C.textTertiary} />
           <Text style={styles.applicantText}>{item.applicantCount}</Text>
         </View>
       </View>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  cardPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    backgroundColor: 'rgba(212, 168, 83, 0.12)',
-  },
-  typeText: {
-    fontSize: 11,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  openBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  openDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.accentGreen,
-  },
-  openText: {
-    fontSize: 11,
-    color: Colors.accentGreen,
-    fontFamily: 'DMSans_500Medium',
-  },
-  timeAgo: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  title: {
-    fontSize: 17,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-    lineHeight: 22,
-    marginBottom: 6,
-  },
-  description: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  meta: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 12,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  skills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 12,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  postedBy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  postedByText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  applicants: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  applicantText: {
-    fontSize: 13,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-});

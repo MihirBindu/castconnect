@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { Conversation } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/mock-data';
 import { Avatar } from './Avatar';
@@ -25,7 +26,85 @@ function formatTime(dateStr: string): string {
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+    },
+    pressed: {
+      backgroundColor: C.surfaceLight,
+    },
+    content: {
+      flex: 1,
+    },
+    topRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 3,
+    },
+    name: {
+      fontSize: 16,
+      color: C.text,
+      fontFamily: 'DMSans_600SemiBold',
+      flex: 1,
+      marginRight: 8,
+    },
+    time: {
+      fontSize: 12,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    timeUnread: {
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    bottomRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 2,
+    },
+    message: {
+      fontSize: 14,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+      flex: 1,
+    },
+    messageUnread: {
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    badge: {
+      minWidth: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: C.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 6,
+    },
+    badgeText: {
+      fontSize: 11,
+      color: C.black,
+      fontFamily: 'DMSans_700Bold',
+    },
+    role: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+  });
+}
+
 export function ConversationItem({ item, onPress }: ConversationItemProps) {
+  const C = useColors();
+  const styles = React.useMemo(() => makeStyles(C), [C]);
+
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
@@ -63,76 +142,3 @@ export function ConversationItem({ item, onPress }: ConversationItemProps) {
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
-  pressed: {
-    backgroundColor: Colors.surfaceLight,
-  },
-  content: {
-    flex: 1,
-  },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 3,
-  },
-  name: {
-    fontSize: 16,
-    color: Colors.text,
-    fontFamily: 'DMSans_600SemiBold',
-    flex: 1,
-    marginRight: 8,
-  },
-  time: {
-    fontSize: 12,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  timeUnread: {
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 2,
-  },
-  message: {
-    fontSize: 14,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-    flex: 1,
-  },
-  messageUnread: {
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  badge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    fontSize: 11,
-    color: Colors.black,
-    fontFamily: 'DMSans_700Bold',
-  },
-  role: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-});

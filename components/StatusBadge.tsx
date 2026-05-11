@@ -1,20 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '@/constants/colors';
 import { ApplicationStatus, AvailabilityStatus } from '@/lib/types';
 
 const STATUS_CONFIG: Record<ApplicationStatus, { color: string; icon: string; label: string }> = {
-  applied: { color: Colors.statusApplied, icon: 'time-outline', label: 'Applied' },
-  shortlisted: { color: Colors.statusShortlisted, icon: 'star-outline', label: 'Shortlisted' },
-  selected: { color: Colors.statusSelected, icon: 'checkmark-circle-outline', label: 'Selected' },
-  rejected: { color: Colors.statusRejected, icon: 'close-circle-outline', label: 'Rejected' },
+  applied: { color: '#007AFF', icon: 'time-outline', label: 'Applied' },
+  shortlisted: { color: '#FF9500', icon: 'star-outline', label: 'Shortlisted' },
+  selected: { color: '#34C759', icon: 'checkmark-circle-outline', label: 'Selected' },
+  rejected: { color: '#FF3B30', icon: 'close-circle-outline', label: 'Rejected' },
 };
 
 const AVAILABILITY_CONFIG: Record<AvailabilityStatus, { color: string; label: string }> = {
-  available: { color: Colors.accentGreen, label: 'Available' },
-  busy: { color: Colors.accentOrange, label: 'Busy' },
-  not_available: { color: Colors.accentRed, label: 'Not Available' },
+  available: { color: '#34C759', label: 'Available' },
+  busy: { color: '#FF9500', label: 'Busy' },
+  not_available: { color: '#FF3B30', label: 'Not Available' },
 };
 
 export function ApplicationStatusBadge({ status }: { status: ApplicationStatus }) {
