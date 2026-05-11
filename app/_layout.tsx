@@ -18,6 +18,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { AppProvider } from "@/lib/AppProvider";
 import { supabase } from "@/lib/supabase";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger('RootLayout');
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,7 +40,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,
@@ -46,22 +49,57 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    if (fontError) {
+      log.error('Font loading failed', { error: fontError.message });
+    }
+  }, [fontError]);
+
+  useEffect(() => {
+    log.info('Fetching initial session');
+    supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (error) {
+          log.error('Failed to get session', { message: error.message });
+          setSession(null);
+          return;
+        }
+        log.info('Session fetched', { hasSession: !!data.session, userId: data.session?.user.id });
+        setSession(data.session);
+      })
+      .catch((err: unknown) => {
+        log.error('getSession threw', { message: err instanceof Error ? err.message : String(err) });
+        setSession(null);
+      });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      log.info('Auth state changed', { event, userId: s?.user.id });
       setSession(s);
-      if (!s) router.replace('/auth/login');
+      if (event === 'SIGNED_OUT' || (!s && event !== 'INITIAL_SESSION')) {
+        router.replace('/auth/login');
+      }
+      if (event === 'TOKEN_REFRESHED') {
+        log.info('Token refreshed successfully');
+      }
     });
-    return () => subscription.unsubscribe();
+
+    return () => {
+      log.debug('Unsubscribing auth listener');
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded && session !== undefined) {
+    if ((fontsLoaded || fontError) && session !== undefined) {
+      log.info('App ready — hiding splash screen', { hasSession: !!session });
       SplashScreen.hideAsync();
-      if (!session) router.replace('/auth/login');
+      if (!session) {
+        log.info('No session — redirecting to login');
+        router.replace('/auth/login');
+      }
     }
-  }, [fontsLoaded, session]);
+  }, [fontsLoaded, fontError, session]);
 
-  if (!fontsLoaded || session === undefined) {
+  if ((!fontsLoaded && !fontError) || session === undefined) {
     return null;
   }
 

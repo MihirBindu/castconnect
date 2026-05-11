@@ -1,5 +1,8 @@
 import { supabase } from '../supabase';
+import { createLogger } from '../logger';
 import { CastingCall } from '../types';
+
+const log = createLogger('api/castingCalls');
 
 function toCastingCall(row: Record<string, unknown>): CastingCall {
   const poster = (row.profiles as Record<string, unknown>) ?? {};
@@ -25,46 +28,86 @@ function toCastingCall(row: Record<string, unknown>): CastingCall {
 }
 
 export async function getCastingCalls(): Promise<CastingCall[]> {
-  const { data, error } = await supabase
-    .from('casting_calls')
-    .select('*, profiles(name, is_verified)')
-    .eq('status', 'open')
-    .order('created_at', { ascending: false });
-  if (error || !data) return [];
-  return data.map(toCastingCall);
+  log.debug('getCastingCalls');
+  try {
+    const { data, error } = await supabase
+      .from('casting_calls')
+      .select('*, profiles(name, is_verified)')
+      .eq('status', 'open')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      log.error('getCastingCalls failed', { code: error.code, message: error.message });
+      return [];
+    }
+
+    log.info('getCastingCalls success', { count: data?.length ?? 0 });
+    return (data ?? []).map(toCastingCall);
+  } catch (err: unknown) {
+    log.error('getCastingCalls threw', { message: err instanceof Error ? err.message : String(err) });
+    return [];
+  }
 }
 
 export async function getCastingCall(id: string): Promise<CastingCall | null> {
-  const { data, error } = await supabase
-    .from('casting_calls')
-    .select('*, profiles(name, is_verified)')
-    .eq('id', id)
-    .single();
-  if (error || !data) return null;
-  return toCastingCall(data);
+  log.debug('getCastingCall', { id });
+  try {
+    const { data, error } = await supabase
+      .from('casting_calls')
+      .select('*, profiles(name, is_verified)')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      log.error('getCastingCall failed', { id, code: error.code, message: error.message });
+      return null;
+    }
+    if (!data) {
+      log.warn('getCastingCall not found', { id });
+      return null;
+    }
+
+    log.info('getCastingCall success', { id });
+    return toCastingCall(data);
+  } catch (err: unknown) {
+    log.error('getCastingCall threw', { id, message: err instanceof Error ? err.message : String(err) });
+    return null;
+  }
 }
 
 export async function createCastingCall(
   call: Omit<CastingCall, 'id' | 'postedByName' | 'postedByVerified' | 'applicantCount' | 'createdAt'>
 ): Promise<CastingCall | null> {
-  const { data, error } = await supabase
-    .from('casting_calls')
-    .insert({
-      title: call.title,
-      description: call.description,
-      role_needed: call.roleNeeded,
-      project_type: call.projectType,
-      project_name: call.projectName,
-      location: call.location,
-      compensation: call.compensation,
-      deadline: call.deadline,
-      posted_by: call.postedBy,
-      skills_required: call.skillsRequired,
-      experience_level: call.experienceLevel,
-      status: call.status,
-    })
-    .select('*, profiles(name, is_verified)')
-    .single();
-  if (error || !data) return null;
-  return toCastingCall(data);
+  log.debug('createCastingCall', { title: call.title });
+  try {
+    const { data, error } = await supabase
+      .from('casting_calls')
+      .insert({
+        title: call.title,
+        description: call.description,
+        role_needed: call.roleNeeded,
+        project_type: call.projectType,
+        project_name: call.projectName,
+        location: call.location,
+        compensation: call.compensation,
+        deadline: call.deadline,
+        posted_by: call.postedBy,
+        skills_required: call.skillsRequired,
+        experience_level: call.experienceLevel,
+        status: call.status,
+      })
+      .select('*, profiles(name, is_verified)')
+      .single();
+
+    if (error) {
+      log.error('createCastingCall failed', { code: error.code, message: error.message });
+      return null;
+    }
+
+    log.info('createCastingCall success', { id: data?.id });
+    return data ? toCastingCall(data) : null;
+  } catch (err: unknown) {
+    log.error('createCastingCall threw', { message: err instanceof Error ? err.message : String(err) });
+    return null;
+  }
 }

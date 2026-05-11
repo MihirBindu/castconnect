@@ -10,6 +10,8 @@ export interface AppState {
   applications: Application[];
   crewBasket: CrewBasketItem[];
   crewProjectName: string;
+  isLoading: boolean;
+  loadError: string | null;
   updateProfile: (updates: Partial<UserProfile>) => void;
   addApplication: (castingCallId: string, castingCallTitle: string) => void;
   sendMessage: (conversationId: string, content: string) => void;

@@ -4,6 +4,9 @@ import * as Crypto from 'expo-crypto';
 import { Session } from '@supabase/supabase-js';
 import { AppContext, AppState } from './store';
 import { supabase } from './supabase';
+import { createLogger } from './logger';
+
+const log = createLogger('AppProvider');
 import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole } from './types';
 import { getProfile, getProfiles } from './api/profiles';
 import { getCastingCalls } from './api/castingCalls';
@@ -36,6 +39,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   const [applications, setApplications] = useState<Application[]>(SAMPLE_APPLICATIONS);
   const [crewBasket, setCrewBasket] = useState<CrewBasketItem[]>([]);
   const [crewProjectName, setCrewProjectNameState] = useState('My Production');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (session?.user) {
@@ -46,21 +51,40 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   }, [session]);
 
   const loadFromSupabase = async (userId: string) => {
-    const [profile, allProfiles, calls, convs, apps] = await Promise.all([
-      getProfile(userId),
-      getProfiles(),
-      getCastingCalls(),
-      getConversations(userId),
-      getMyApplications(userId),
-    ]);
-    if (profile) setMyProfile(profile);
-    if (allProfiles.length) setProfiles(allProfiles.filter(p => p.id !== userId));
-    if (calls.length) setCastingCalls(calls);
-    if (convs.length) setConversations(convs);
-    if (apps.length) setApplications(apps);
+    log.debug('loadFromSupabase start', { userId });
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const [profile, allProfiles, calls, convs, apps] = await Promise.all([
+        getProfile(userId),
+        getProfiles(),
+        getCastingCalls(),
+        getConversations(userId),
+        getMyApplications(userId),
+      ]);
+      if (profile) {
+        setMyProfile(profile);
+      } else {
+        log.warn('loadFromSupabase: profile not found', { userId });
+      }
+      if (allProfiles.length) setProfiles(allProfiles.filter(p => p.id !== userId));
+      if (calls.length) setCastingCalls(calls);
+      if (convs.length) setConversations(convs);
+      if (apps.length) setApplications(apps);
+      log.info('loadFromSupabase complete', { profiles: allProfiles.length, calls: calls.length, convs: convs.length, apps: apps.length });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error('loadFromSupabase failed', { message: msg });
+      setLoadError('Failed to load your data. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const loadData = async () => {
+    log.debug('loadData (local storage)');
+    setIsLoading(true);
+    setLoadError(null);
     try {
       const [profileData, appData, convData, msgData, crewData, crewProjData] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
@@ -76,8 +100,13 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
       if (msgData) setMessages(JSON.parse(msgData));
       if (crewData) setCrewBasket(JSON.parse(crewData));
       if (crewProjData) setCrewProjectNameState(crewProjData);
-    } catch (e) {
-      console.log('Error loading data:', e);
+      log.info('loadData (local storage) complete');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error('loadData (local storage) failed', { message: msg });
+      setLoadError('Failed to load saved data.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -210,6 +239,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     applications,
     crewBasket,
     crewProjectName,
+    isLoading,
+    loadError,
     updateProfile,
     addApplication,
     sendMessage,
@@ -220,7 +251,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setCrewProjectName,
     isInCrewBasket,
     signOut,
-  }), [myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, updateProfile, addApplication, sendMessage, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
+  }), [myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, loadError, updateProfile, addApplication, sendMessage, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>

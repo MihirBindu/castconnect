@@ -5,7 +5,31 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { createLogger } from '@/lib/logger';
 import Colors from '@/constants/colors';
+
+const log = createLogger('RegisterScreen');
+
+function registerErrorMessage(code: string | undefined, fallback: string): string {
+  switch (code) {
+    case 'user_already_exists':
+    case 'email_exists':             return 'An account with this email already exists. Try signing in.';
+    case 'weak_password':            return 'Password is too weak. Use at least 8 characters with letters and numbers.';
+    case 'over_email_send_rate_limit':
+    case 'over_request_rate_limit':  return 'Too many sign-up attempts. Please wait a moment and try again.';
+    case 'invalid_email':            return 'Please enter a valid email address.';
+    case 'database_querying_schema': return 'Database not set up yet. Run schema.sql in Supabase first.';
+    default:                         return fallback;
+  }
+}
+
+function isNetworkError(message: string): boolean {
+  return (
+    message.includes('Network request failed') ||
+    message.includes('fetch failed') ||
+    message.includes('Failed to fetch')
+  );
+}
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -14,29 +38,63 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!name || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields.');
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedName || !trimmedEmail || !password) {
+      Alert.alert('Missing fields', 'Please fill in all fields.');
+      return;
+    }
+    if (!trimmedEmail.includes('@')) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters.');
+      Alert.alert('Weak password', 'Password must be at least 6 characters.');
       return;
     }
+
+    log.info('Register attempt', { email: trimmedEmail });
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name } },
-    });
-    setLoading(false);
-    if (error) {
-      Alert.alert('Registration Failed', error.message);
-    } else {
-      Alert.alert(
-        'Verify your email',
-        'We sent a confirmation link to your email. Please verify before signing in.',
-        [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
-      );
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: { data: { name: trimmedName } },
+      });
+
+      if (error) {
+        log.error('Registration failed', { code: error.code, message: error.message });
+        const message = isNetworkError(error.message)
+          ? 'Connection failed. Check your internet connection and try again.'
+          : registerErrorMessage(error.code, error.message);
+        Alert.alert('Registration Failed', message);
+        return;
+      }
+
+      // Supabase returns a session immediately if email confirmation is disabled
+      if (data.session) {
+        log.info('Registration successful (auto-confirmed)', { userId: data.user?.id });
+        router.replace('/(tabs)');
+      } else {
+        log.info('Registration successful (confirmation required)', { userId: data.user?.id });
+        Alert.alert(
+          'Check your email',
+          'We sent a confirmation link to your email. Please verify before signing in.',
+          [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
+        );
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      log.error('Registration exception', { message });
+      if (isNetworkError(message)) {
+        Alert.alert('No connection', 'Check your internet connection and try again.');
+      } else {
+        Alert.alert('Error', 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -53,6 +111,7 @@ export default function RegisterScreen() {
           value={name}
           onChangeText={setName}
           autoComplete="name"
+          editable={!loading}
         />
         <TextInput
           style={styles.input}
@@ -63,6 +122,7 @@ export default function RegisterScreen() {
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
+          editable={!loading}
         />
         <TextInput
           style={styles.input}
@@ -72,9 +132,10 @@ export default function RegisterScreen() {
           onChangeText={setPassword}
           secureTextEntry
           autoComplete="new-password"
+          editable={!loading}
         />
 
-        <TouchableOpacity style={styles.btn} onPress={handleRegister} disabled={loading}>
+        <TouchableOpacity style={[styles.btn, loading && styles.btnDisabled]} onPress={handleRegister} disabled={loading}>
           {loading ? (
             <ActivityIndicator color={Colors.black} />
           ) : (
@@ -82,7 +143,7 @@ export default function RegisterScreen() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/auth/login')} style={styles.link}>
+        <TouchableOpacity onPress={() => router.push('/auth/login')} style={styles.link} disabled={loading}>
           <Text style={styles.linkText}>Already have an account? <Text style={styles.linkAccent}>Sign In</Text></Text>
         </TouchableOpacity>
       </ScrollView>
@@ -112,6 +173,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, borderRadius: 12,
     paddingVertical: 15, alignItems: 'center', marginTop: 8,
   },
+  btnDisabled: { opacity: 0.6 },
   btnText: { color: Colors.black, fontFamily: 'DMSans_700Bold', fontSize: 16 },
   link: { marginTop: 20, alignItems: 'center' },
   linkText: { color: Colors.textSecondary, fontFamily: 'DMSans_400Regular', fontSize: 14 },

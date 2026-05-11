@@ -1,5 +1,8 @@
 import { supabase } from '../supabase';
+import { createLogger } from '../logger';
 import { UserProfile } from '../types';
+
+const log = createLogger('api/profiles');
 
 function toProfile(row: Record<string, unknown>): UserProfile {
   return {
@@ -29,63 +32,138 @@ function toProfile(row: Record<string, unknown>): UserProfile {
 }
 
 export async function getProfile(id: string): Promise<UserProfile | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', id)
-    .single();
-  if (error || !data) return null;
-  const connections = await getConnectionIds(id);
-  return { ...toProfile(data), connections };
+  log.debug('getProfile', { id });
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      log.error('getProfile failed', { id, code: error.code, message: error.message });
+      return null;
+    }
+    if (!data) {
+      log.warn('getProfile returned no data', { id });
+      return null;
+    }
+
+    const connections = await getConnectionIds(id);
+    log.info('getProfile success', { id, connections: connections.length });
+    return { ...toProfile(data), connections };
+  } catch (err: unknown) {
+    log.error('getProfile threw', { id, message: err instanceof Error ? err.message : String(err) });
+    return null;
+  }
 }
 
 export async function getProfiles(): Promise<UserProfile[]> {
-  const { data, error } = await supabase.from('profiles').select('*').order('rating', { ascending: false });
-  if (error || !data) return [];
-  return data.map(toProfile);
+  log.debug('getProfiles');
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('rating', { ascending: false });
+
+    if (error) {
+      log.error('getProfiles failed', { code: error.code, message: error.message });
+      return [];
+    }
+
+    log.info('getProfiles success', { count: data?.length ?? 0 });
+    return (data ?? []).map(toProfile);
+  } catch (err: unknown) {
+    log.error('getProfiles threw', { message: err instanceof Error ? err.message : String(err) });
+    return [];
+  }
 }
 
-export async function updateProfile(id: string, updates: Partial<UserProfile>): Promise<void> {
+export async function updateProfile(id: string, updates: Partial<UserProfile>): Promise<boolean> {
+  log.debug('updateProfile', { id, fields: Object.keys(updates) });
   const payload: Record<string, unknown> = {};
-  if (updates.name !== undefined)           payload.name = updates.name;
-  if (updates.role !== undefined)           payload.role = updates.role;
-  if (updates.title !== undefined)          payload.title = updates.title;
-  if (updates.crewRole !== undefined)       payload.crew_role = updates.crewRole;
-  if (updates.bio !== undefined)            payload.bio = updates.bio;
-  if (updates.skills !== undefined)         payload.skills = updates.skills;
-  if (updates.experience !== undefined)     payload.experience = updates.experience;
+  if (updates.name !== undefined)            payload.name = updates.name;
+  if (updates.role !== undefined)            payload.role = updates.role;
+  if (updates.title !== undefined)           payload.title = updates.title;
+  if (updates.crewRole !== undefined)        payload.crew_role = updates.crewRole;
+  if (updates.bio !== undefined)             payload.bio = updates.bio;
+  if (updates.skills !== undefined)          payload.skills = updates.skills;
+  if (updates.experience !== undefined)      payload.experience = updates.experience;
   if (updates.experienceYears !== undefined) payload.experience_years = updates.experienceYears;
-  if (updates.location !== undefined)       payload.location = updates.location;
-  if (updates.availability !== undefined)   payload.availability = updates.availability;
-  if (updates.portfolioLinks !== undefined) payload.portfolio_links = updates.portfolioLinks;
-  if (updates.profileImage !== undefined)   payload.profile_image = updates.profileImage;
-  if (updates.contactEmail !== undefined)   payload.contact_email = updates.contactEmail;
-  if (updates.contactPhone !== undefined)   payload.contact_phone = updates.contactPhone;
-  if (updates.industryTypes !== undefined)  payload.industry_types = updates.industryTypes;
-  if (updates.dayRate !== undefined)        payload.day_rate = updates.dayRate;
+  if (updates.location !== undefined)        payload.location = updates.location;
+  if (updates.availability !== undefined)    payload.availability = updates.availability;
+  if (updates.portfolioLinks !== undefined)  payload.portfolio_links = updates.portfolioLinks;
+  if (updates.profileImage !== undefined)    payload.profile_image = updates.profileImage;
+  if (updates.contactEmail !== undefined)    payload.contact_email = updates.contactEmail;
+  if (updates.contactPhone !== undefined)    payload.contact_phone = updates.contactPhone;
+  if (updates.industryTypes !== undefined)   payload.industry_types = updates.industryTypes;
+  if (updates.dayRate !== undefined)         payload.day_rate = updates.dayRate;
 
-  await supabase.from('profiles').update(payload).eq('id', id);
+  try {
+    const { error } = await supabase.from('profiles').update(payload).eq('id', id);
+    if (error) {
+      log.error('updateProfile failed', { id, code: error.code, message: error.message });
+      return false;
+    }
+    log.info('updateProfile success', { id });
+    return true;
+  } catch (err: unknown) {
+    log.error('updateProfile threw', { id, message: err instanceof Error ? err.message : String(err) });
+    return false;
+  }
 }
 
 async function getConnectionIds(userId: string): Promise<string[]> {
-  const { data } = await supabase
-    .from('connections')
-    .select('following_id')
-    .eq('follower_id', userId);
-  return (data ?? []).map((r) => r.following_id);
+  try {
+    const { data, error } = await supabase
+      .from('connections')
+      .select('following_id')
+      .eq('follower_id', userId);
+
+    if (error) {
+      log.warn('getConnectionIds failed', { userId, message: error.message });
+      return [];
+    }
+    return (data ?? []).map((r) => r.following_id);
+  } catch (err: unknown) {
+    log.error('getConnectionIds threw', { userId, message: err instanceof Error ? err.message : String(err) });
+    return [];
+  }
 }
 
-export async function toggleConnection(myId: string, targetId: string): Promise<void> {
-  const { data } = await supabase
-    .from('connections')
-    .select('follower_id')
-    .eq('follower_id', myId)
-    .eq('following_id', targetId)
-    .maybeSingle();
+export async function toggleConnection(myId: string, targetId: string): Promise<boolean> {
+  log.debug('toggleConnection', { myId, targetId });
+  try {
+    const { data, error: fetchError } = await supabase
+      .from('connections')
+      .select('follower_id')
+      .eq('follower_id', myId)
+      .eq('following_id', targetId)
+      .maybeSingle();
 
-  if (data) {
-    await supabase.from('connections').delete().eq('follower_id', myId).eq('following_id', targetId);
-  } else {
-    await supabase.from('connections').insert({ follower_id: myId, following_id: targetId });
+    if (fetchError) {
+      log.error('toggleConnection check failed', { message: fetchError.message });
+      return false;
+    }
+
+    if (data) {
+      const { error } = await supabase
+        .from('connections')
+        .delete()
+        .eq('follower_id', myId)
+        .eq('following_id', targetId);
+      if (error) { log.error('toggleConnection unfollow failed', { message: error.message }); return false; }
+      log.info('Unfollowed', { myId, targetId });
+    } else {
+      const { error } = await supabase
+        .from('connections')
+        .insert({ follower_id: myId, following_id: targetId });
+      if (error) { log.error('toggleConnection follow failed', { message: error.message }); return false; }
+      log.info('Followed', { myId, targetId });
+    }
+    return true;
+  } catch (err: unknown) {
+    log.error('toggleConnection threw', { message: err instanceof Error ? err.message : String(err) });
+    return false;
   }
 }
