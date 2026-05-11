@@ -60,7 +60,11 @@ delete from auth.users
 
 -- ────────────────────────────────────────────────────────────
 -- AUTH USERS (21 users — all password: Test@1234)
+-- Disable the auto-profile trigger so we can insert full
+-- profile data ourselves below without hitting a duplicate key.
 -- ────────────────────────────────────────────────────────────
+alter table auth.users disable trigger on_auth_user_created;
+
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
   email_confirmed_at, created_at, updated_at,
@@ -151,9 +155,11 @@ values
    'tara.writer@email.com',    crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Tara Menon"}',          '{"provider":"email","providers":["email"]}');
 
+alter table auth.users enable trigger on_auth_user_created;
+
 -- ────────────────────────────────────────────────────────────
 -- PROFILES
--- Inserted directly (bypassing trigger which only sets id+email)
+-- Inserted directly with full data (trigger was disabled above)
 -- ────────────────────────────────────────────────────────────
 insert into public.profiles (
   id, name, role, title, crew_role, bio, skills, experience, experience_years,
