@@ -78,14 +78,13 @@ function makeStyles(C: ThemeColors) {
       fontFamily: 'DMSans_600SemiBold',
     },
     filterRow: {
-      height: 48,
-      marginBottom: 6,
+      marginBottom: 8,
     },
     filterRowContent: {
       gap: 8,
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 6,
+      paddingVertical: 4,
       paddingHorizontal: 20,
     },
     filterChip: {
@@ -299,33 +298,34 @@ export default function JobsScreen() {
       )}
 
       {viewMode === 'browse' && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterRow}
-          contentContainerStyle={styles.filterRowContent}
-        >
-          {INDUSTRY_FILTERS.map(item => (
-            <Pressable
-              key={item.key}
-              onPress={() => {
-                Haptics.selectionAsync();
-                setIndustryFilter(item.key);
-              }}
-              style={[
-                styles.filterChip,
-                industryFilter === item.key && styles.filterChipActive,
-              ]}
-            >
-              <Text style={[
-                styles.filterText,
-                industryFilter === item.key && styles.filterTextActive,
-              ]}>
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <View style={styles.filterRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRowContent}
+          >
+            {INDUSTRY_FILTERS.map(item => (
+              <Pressable
+                key={item.key}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setIndustryFilter(item.key);
+                }}
+                style={[
+                  styles.filterChip,
+                  industryFilter === item.key && styles.filterChipActive,
+                ]}
+              >
+                <Text style={[
+                  styles.filterText,
+                  industryFilter === item.key && styles.filterTextActive,
+                ]}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
       {viewMode === 'browse' && (
