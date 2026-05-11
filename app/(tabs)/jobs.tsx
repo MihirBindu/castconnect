@@ -79,36 +79,32 @@ function makeStyles(C: ThemeColors) {
     },
     filterRow: {
       paddingHorizontal: 20,
-      marginBottom: 10,
+      marginBottom: 6,
     },
     filterRowContent: {
-      gap: 8,
+      gap: 6,
       flexDirection: 'row',
       alignItems: 'center',
     },
     filterChip: {
-      height: 34,
+      height: 32,
       paddingHorizontal: 14,
-      borderRadius: 17,
-      backgroundColor: C.surface,
-      borderWidth: 1,
-      borderColor: C.border,
+      borderRadius: 16,
+      backgroundColor: C.surfaceLight,
       alignItems: 'center',
       justifyContent: 'center',
     },
     filterChipActive: {
-      backgroundColor: 'rgba(212, 168, 83, 0.15)',
-      borderColor: C.primary,
+      backgroundColor: C.primary,
     },
     filterText: {
       fontSize: 13,
-      color: C.textSecondary,
+      color: C.textTertiary,
       fontFamily: 'DMSans_500Medium',
-      lineHeight: 18,
     },
     filterTextActive: {
-      color: C.primary,
-      fontFamily: 'DMSans_600SemiBold',
+      color: C.background,
+      fontFamily: 'DMSans_700Bold',
     },
     list: {
       padding: 20,
@@ -166,12 +162,14 @@ function makeStyles(C: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: C.surfaceLight,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      height: 40,
-      gap: 8,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      height: 44,
+      gap: 10,
       marginHorizontal: 20,
-      marginBottom: 8,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: C.border,
     },
     searchInput: {
       flex: 1,
@@ -180,12 +178,25 @@ function makeStyles(C: ThemeColors) {
       fontFamily: 'DMSans_400Regular',
       height: '100%',
     },
+    resultBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      paddingBottom: 6,
+      gap: 6,
+    },
+    resultDot: {
+      width: 5,
+      height: 5,
+      borderRadius: 2.5,
+      backgroundColor: C.primary,
+    },
     resultCount: {
       fontSize: 12,
       color: C.textTertiary,
-      fontFamily: 'DMSans_500Medium',
-      paddingHorizontal: 20,
-      paddingBottom: 4,
+      fontFamily: 'DMSans_600SemiBold',
+      letterSpacing: 0.3,
     },
   });
 }
@@ -312,9 +323,12 @@ export default function JobsScreen() {
       )}
 
       {viewMode === 'browse' && (
-        <Text style={styles.resultCount}>
-          {filteredCalls.length} open call{filteredCalls.length !== 1 ? 's' : ''}
-        </Text>
+        <View style={styles.resultBar}>
+          <View style={styles.resultDot} />
+          <Text style={styles.resultCount}>
+            {filteredCalls.length} open call{filteredCalls.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
       )}
 
       {viewMode === 'browse' ? (
