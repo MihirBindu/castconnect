@@ -10,6 +10,8 @@ export interface AppState {
   applications: Application[];
   crewBasket: CrewBasketItem[];
   crewProjectName: string;
+  isLoading: boolean;
+  loadError: string | null;
   updateProfile: (updates: Partial<UserProfile>) => void;
   addApplication: (castingCallId: string, castingCallTitle: string) => void;
   sendMessage: (conversationId: string, content: string) => void;
@@ -19,6 +21,7 @@ export interface AppState {
   clearCrewBasket: () => void;
   setCrewProjectName: (name: string) => void;
   isInCrewBasket: (profileId: string) => boolean;
+  signOut: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppState | null>(null);
