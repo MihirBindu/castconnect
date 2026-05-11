@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 import { AvailabilityBadge } from '@/components/StatusBadge';
@@ -20,9 +21,238 @@ import { SkillTag } from '@/components/SkillTag';
 import { ROLE_LABELS, INDUSTRY_LABELS } from '@/lib/mock-data';
 import * as Haptics from 'expo-haptics';
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: C.surfaceLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    topBarTitle: {
+      fontSize: 16,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    profileHeader: {
+      alignItems: 'center',
+      paddingVertical: 24,
+      marginHorizontal: 20,
+      borderRadius: 20,
+      gap: 8,
+    },
+    profileName: {
+      fontSize: 24,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+      marginTop: 8,
+    },
+    profileTitle: {
+      fontSize: 16,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    profileMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+      marginTop: 4,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    metaText: {
+      fontSize: 13,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    roleBadge: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: 'rgba(212, 168, 83, 0.15)',
+      marginTop: 4,
+    },
+    roleText: {
+      fontSize: 13,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    statsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+      gap: 0,
+    },
+    statItem: {
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      gap: 2,
+    },
+    statIconRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    statValue: {
+      fontSize: 16,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    statLabel: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    statDivider: {
+      width: 1,
+      height: 28,
+      backgroundColor: C.border,
+    },
+    actions: {
+      flexDirection: 'row',
+      paddingHorizontal: 20,
+      gap: 12,
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    connectBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: C.primary,
+    },
+    connectedBtn: {
+      backgroundColor: 'rgba(52, 199, 89, 0.12)',
+      borderWidth: 1,
+      borderColor: 'rgba(52, 199, 89, 0.3)',
+    },
+    connectBtnText: {
+      fontSize: 15,
+      color: C.black,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    connectedBtnText: {
+      color: '#34C759',
+    },
+    messageBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: C.primary,
+    },
+    messageBtnText: {
+      fontSize: 15,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    content: {
+      padding: 20,
+    },
+    section: {
+      marginBottom: 24,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_600SemiBold',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 10,
+    },
+    bioText: {
+      fontSize: 15,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+      lineHeight: 22,
+    },
+    skillsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    infoText: {
+      fontSize: 15,
+      color: C.text,
+      fontFamily: 'DMSans_500Medium',
+    },
+    linkItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      backgroundColor: C.surface,
+      borderRadius: 10,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    linkText: {
+      fontSize: 14,
+      color: C.accentBlue,
+      fontFamily: 'DMSans_400Regular',
+      flex: 1,
+    },
+    contactItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 10,
+    },
+    contactText: {
+      fontSize: 15,
+      color: C.text,
+      fontFamily: 'DMSans_400Regular',
+    },
+    notFound: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+    },
+    notFoundText: {
+      fontSize: 16,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    backLink: {
+      fontSize: 14,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+  });
+}
+
 export default function ProfileDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { profiles, myProfile, toggleConnection } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
@@ -52,7 +282,7 @@ export default function ProfileDetail() {
     <View style={[styles.container, { paddingTop: topPadding }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={Colors.text} />
+          <Ionicons name="chevron-back" size={24} color={C.text} />
         </Pressable>
         <Text style={styles.topBarTitle}>Profile</Text>
         <View style={{ width: 40 }} />
@@ -71,7 +301,7 @@ export default function ProfileDetail() {
           <Text style={styles.profileTitle}>{profile.title}</Text>
           <View style={styles.profileMeta}>
             <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
+              <Ionicons name="location-outline" size={14} color={C.textSecondary} />
               <Text style={styles.metaText}>{profile.location}</Text>
             </View>
             <AvailabilityBadge status={profile.availability} />
@@ -82,7 +312,7 @@ export default function ProfileDetail() {
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <View style={styles.statIconRow}>
-                <Ionicons name="star" size={14} color={Colors.primary} />
+                <Ionicons name="star" size={14} color={C.primary} />
                 <Text style={styles.statValue}>{profile.rating.toFixed(1)}</Text>
               </View>
               <Text style={styles.statLabel}>{profile.reviewCount} reviews</Text>
@@ -112,7 +342,7 @@ export default function ProfileDetail() {
             <Ionicons
               name={isConnected ? 'checkmark' : 'person-add-outline'}
               size={18}
-              color={isConnected ? Colors.accentGreen : Colors.black}
+              color={isConnected ? '#34C759' : C.black}
             />
             <Text style={[styles.connectBtnText, isConnected && styles.connectedBtnText]}>
               {isConnected ? 'Connected' : 'Connect'}
@@ -124,7 +354,7 @@ export default function ProfileDetail() {
             }}
             style={({ pressed }) => [styles.messageBtn, pressed && { opacity: 0.85 }]}
           >
-            <Ionicons name="chatbubble-outline" size={18} color={Colors.primary} />
+            <Ionicons name="chatbubble-outline" size={18} color={C.primary} />
             <Text style={styles.messageBtnText}>Message</Text>
           </Pressable>
         </View>
@@ -167,9 +397,9 @@ export default function ProfileDetail() {
                   onPress={() => Linking.openURL(link)}
                   style={({ pressed }) => [styles.linkItem, pressed && { opacity: 0.7 }]}
                 >
-                  <MaterialCommunityIcons name="link-variant" size={18} color={Colors.primary} />
+                  <MaterialCommunityIcons name="link-variant" size={18} color={C.primary} />
                   <Text style={styles.linkText} numberOfLines={1}>{link}</Text>
-                  <Ionicons name="open-outline" size={14} color={Colors.textTertiary} />
+                  <Ionicons name="open-outline" size={14} color={C.textTertiary} />
                 </Pressable>
               ))}
             </View>
@@ -178,11 +408,11 @@ export default function ProfileDetail() {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Contact</Text>
             <View style={styles.contactItem}>
-              <Ionicons name="mail-outline" size={18} color={Colors.textSecondary} />
+              <Ionicons name="mail-outline" size={18} color={C.textSecondary} />
               <Text style={styles.contactText}>{profile.contactEmail}</Text>
             </View>
             <View style={styles.contactItem}>
-              <Ionicons name="call-outline" size={18} color={Colors.textSecondary} />
+              <Ionicons name="call-outline" size={18} color={C.textSecondary} />
               <Text style={styles.contactText}>{profile.contactPhone}</Text>
             </View>
           </View>
@@ -191,228 +421,3 @@ export default function ProfileDetail() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topBarTitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  profileHeader: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    marginHorizontal: 20,
-    borderRadius: 20,
-    gap: 8,
-  },
-  profileName: {
-    fontSize: 24,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-    marginTop: 8,
-  },
-  profileTitle: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  profileMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 4,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  roleBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(212, 168, 83, 0.15)',
-    marginTop: 4,
-  },
-  roleText: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 0,
-  },
-  statItem: {
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 2,
-  },
-  statIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 16,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  statLabel: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: Colors.border,
-  },
-  actions: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 12,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  connectBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-  },
-  connectedBtn: {
-    backgroundColor: 'rgba(52, 199, 89, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 199, 89, 0.3)',
-  },
-  connectBtnText: {
-    fontSize: 15,
-    color: Colors.black,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  connectedBtnText: {
-    color: Colors.accentGreen,
-  },
-  messageBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-  },
-  messageBtnText: {
-    fontSize: 15,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  content: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_600SemiBold',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  bioText: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    lineHeight: 22,
-  },
-  skillsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  infoText: {
-    fontSize: 15,
-    color: Colors.text,
-    fontFamily: 'DMSans_500Medium',
-  },
-  linkItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  linkText: {
-    fontSize: 14,
-    color: Colors.accentBlue,
-    fontFamily: 'DMSans_400Regular',
-    flex: 1,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  contactText: {
-    fontSize: 15,
-    color: Colors.text,
-    fontFamily: 'DMSans_400Regular',
-  },
-  notFound: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  notFoundText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  backLink: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-});

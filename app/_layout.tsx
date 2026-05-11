@@ -17,6 +17,7 @@ import { Session } from "@supabase/supabase-js";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { AppProvider } from "@/lib/AppProvider";
+import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import { createLogger } from "@/lib/logger";
 
@@ -25,17 +26,21 @@ const log = createLogger('RootLayout');
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
+  const { mode } = useTheme();
   return (
-    <Stack screenOptions={{ headerShown: false, headerBackTitle: "Back" }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth" options={{ headerShown: false }} />
-      <Stack.Screen name="casting/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: "modal" }} />
-      <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="crew-basket" options={{ headerShown: false }} />
-      <Stack.Screen name="crew-review" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <StatusBar style={mode === 'light' ? 'dark' : 'light'} />
+      <Stack screenOptions={{ headerShown: false, headerBackTitle: "Back" }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="casting/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: "modal" }} />
+        <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="crew-basket" options={{ headerShown: false }} />
+        <Stack.Screen name="crew-review" options={{ headerShown: false }} />
+      </Stack>
+    </>
   );
 }
 
@@ -108,10 +113,11 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <KeyboardProvider>
-            <AppProvider session={session}>
-              <StatusBar style="light" />
-              <RootLayoutNav />
-            </AppProvider>
+            <ThemeProvider>
+              <AppProvider session={session}>
+                <RootLayoutNav />
+              </AppProvider>
+            </ThemeProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>

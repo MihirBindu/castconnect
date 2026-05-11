@@ -12,14 +12,289 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 import { UserProfile } from '@/lib/types';
 import * as Haptics from 'expo-haptics';
 
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 12,
+    },
+    backBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: C.surfaceLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      flex: 1,
+      fontSize: 20,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+      textAlign: 'center',
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      gap: 16,
+    },
+    projectSection: {
+      gap: 8,
+    },
+    sectionLabel: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_600SemiBold',
+      letterSpacing: 1,
+      marginTop: 4,
+    },
+    projectNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    projectName: {
+      fontSize: 22,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    editNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    nameInput: {
+      flex: 1,
+      fontSize: 20,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+      borderBottomWidth: 1,
+      borderBottomColor: C.primary,
+      paddingVertical: 4,
+    },
+    saveNameBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'rgba(52, 199, 89, 0.1)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    budgetCard: {
+      backgroundColor: C.surface,
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    budgetRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    budgetItem: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 4,
+    },
+    budgetValue: {
+      fontSize: 20,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    budgetLabel: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    budgetDivider: {
+      width: 1,
+      height: 40,
+      backgroundColor: C.border,
+    },
+    roleGroup: {
+      backgroundColor: C.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: C.border,
+      overflow: 'hidden',
+    },
+    roleHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      backgroundColor: 'rgba(212, 168, 83, 0.06)',
+      borderBottomWidth: 1,
+      borderBottomColor: C.border,
+    },
+    roleName: {
+      fontSize: 14,
+      color: C.primary,
+      fontFamily: 'DMSans_700Bold',
+    },
+    roleRate: {
+      fontSize: 12,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+    memberRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      gap: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: C.border,
+    },
+    memberInfo: {
+      flex: 1,
+    },
+    memberName: {
+      fontSize: 14,
+      color: C.text,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    memberExp: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+      marginTop: 1,
+    },
+    memberRight: {
+      alignItems: 'flex-end',
+      gap: 2,
+    },
+    miniRating: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    miniRatingText: {
+      fontSize: 11,
+      color: C.primary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    memberRate: {
+      fontSize: 11,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_400Regular',
+    },
+    messageSection: {
+      gap: 8,
+    },
+    messageInput: {
+      backgroundColor: C.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: C.border,
+      padding: 14,
+      minHeight: 120,
+      fontSize: 14,
+      color: C.text,
+      fontFamily: 'DMSans_400Regular',
+      lineHeight: 20,
+    },
+    bottomBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 20,
+      paddingTop: 14,
+      backgroundColor: C.surface,
+      borderTopWidth: 1,
+      borderTopColor: C.border,
+    },
+    editBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: C.surfaceLight,
+    },
+    editBtnText: {
+      fontSize: 14,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    inviteBtn: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: C.primary,
+    },
+    inviteBtnText: {
+      fontSize: 14,
+      color: C.background,
+      fontFamily: 'DMSans_700Bold',
+    },
+    successContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 40,
+      gap: 16,
+    },
+    successIcon: {
+      marginBottom: 8,
+    },
+    successTitle: {
+      fontSize: 24,
+      color: C.text,
+      fontFamily: 'DMSans_700Bold',
+    },
+    successText: {
+      fontSize: 14,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_400Regular',
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    doneBtn: {
+      marginTop: 16,
+      paddingHorizontal: 40,
+      paddingVertical: 14,
+      borderRadius: 14,
+      backgroundColor: C.primary,
+    },
+    doneBtnText: {
+      fontSize: 16,
+      color: C.background,
+      fontFamily: 'DMSans_700Bold',
+    },
+  });
+}
+
 export default function CrewReviewScreen() {
   const insets = useSafeAreaInsets();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const {
     crewBasket,
     profiles,
@@ -81,7 +356,7 @@ export default function CrewReviewScreen() {
       <View style={[styles.container, { paddingTop: topPadding }]}>
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={72} color={Colors.accentGreen} />
+            <Ionicons name="checkmark-circle" size={72} color="#34C759" />
           </View>
           <Text style={styles.successTitle}>Invites Sent</Text>
           <Text style={styles.successText}>
@@ -100,7 +375,7 @@ export default function CrewReviewScreen() {
     <View style={[styles.container, { paddingTop: topPadding }]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} testID="back-btn">
-          <Ionicons name="arrow-back" size={22} color={Colors.text} />
+          <Ionicons name="arrow-back" size={22} color={C.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Review & Invite</Text>
         <View style={{ width: 36 }} />
@@ -123,7 +398,7 @@ export default function CrewReviewScreen() {
                 value={tempName}
                 onChangeText={setTempName}
                 autoFocus
-                placeholderTextColor={Colors.textTertiary}
+                placeholderTextColor={C.textTertiary}
               />
               <Pressable
                 onPress={() => {
@@ -134,7 +409,7 @@ export default function CrewReviewScreen() {
                 }}
                 style={styles.saveNameBtn}
               >
-                <Ionicons name="checkmark" size={18} color={Colors.accentGreen} />
+                <Ionicons name="checkmark" size={18} color="#34C759" />
               </Pressable>
             </View>
           ) : (
@@ -147,7 +422,7 @@ export default function CrewReviewScreen() {
               testID="edit-project-name"
             >
               <Text style={styles.projectName}>{crewProjectName}</Text>
-              <Ionicons name="pencil" size={14} color={Colors.textTertiary} />
+              <Ionicons name="pencil" size={14} color={C.textTertiary} />
             </Pressable>
           )}
         </View>
@@ -155,19 +430,19 @@ export default function CrewReviewScreen() {
         <View style={styles.budgetCard}>
           <View style={styles.budgetRow}>
             <View style={styles.budgetItem}>
-              <Ionicons name="people" size={18} color={Colors.primary} />
+              <Ionicons name="people" size={18} color={C.primary} />
               <Text style={styles.budgetValue}>{crewMembers.length}</Text>
               <Text style={styles.budgetLabel}>Crew</Text>
             </View>
             <View style={styles.budgetDivider} />
             <View style={styles.budgetItem}>
-              <Ionicons name="layers" size={18} color={Colors.primary} />
+              <Ionicons name="layers" size={18} color={C.primary} />
               <Text style={styles.budgetValue}>{Object.keys(roleGroups).length}</Text>
               <Text style={styles.budgetLabel}>Roles</Text>
             </View>
             <View style={styles.budgetDivider} />
             <View style={styles.budgetItem}>
-              <Ionicons name="cash" size={18} color={Colors.primary} />
+              <Ionicons name="cash" size={18} color={C.primary} />
               <Text style={styles.budgetValue}>{formatBudget(totalBudget)}</Text>
               <Text style={styles.budgetLabel}>Day Total</Text>
             </View>
@@ -192,7 +467,7 @@ export default function CrewReviewScreen() {
                 </View>
                 <View style={styles.memberRight}>
                   <View style={styles.miniRating}>
-                    <Ionicons name="star" size={10} color={Colors.primary} />
+                    <Ionicons name="star" size={10} color={C.primary} />
                     <Text style={styles.miniRatingText}>{m.profile!.rating.toFixed(1)}</Text>
                   </View>
                   <Text style={styles.memberRate}>
@@ -210,7 +485,7 @@ export default function CrewReviewScreen() {
             style={styles.messageInput}
             multiline
             placeholder={`Hi! We are assembling the crew for "${crewProjectName}" and would love to have you on board. Please review the details and let us know your availability.`}
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
             value={message}
             onChangeText={setMessage}
             textAlignVertical="top"
@@ -226,7 +501,7 @@ export default function CrewReviewScreen() {
           onPress={() => router.back()}
           style={styles.editBtn}
         >
-          <Ionicons name="pencil" size={16} color={Colors.textSecondary} />
+          <Ionicons name="pencil" size={16} color={C.textSecondary} />
           <Text style={styles.editBtnText}>Edit Crew</Text>
         </Pressable>
         <Pressable
@@ -234,280 +509,10 @@ export default function CrewReviewScreen() {
           style={styles.inviteBtn}
           testID="send-invites-btn"
         >
-          <Ionicons name="send" size={16} color={Colors.background} />
+          <Ionicons name="send" size={16} color={C.background} />
           <Text style={styles.inviteBtnText}>Send Invites ({crewMembers.length})</Text>
         </Pressable>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 20,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-    textAlign: 'center',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  projectSection: {
-    gap: 8,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_600SemiBold',
-    letterSpacing: 1,
-    marginTop: 4,
-  },
-  projectNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  projectName: {
-    fontSize: 22,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  editNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  nameInput: {
-    flex: 1,
-    fontSize: 20,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.primary,
-    paddingVertical: 4,
-  },
-  saveNameBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(52, 199, 89, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  budgetCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  budgetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  budgetItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  budgetValue: {
-    fontSize: 20,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  budgetLabel: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  budgetDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: Colors.border,
-  },
-  roleGroup: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-  },
-  roleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(212, 168, 83, 0.06)',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  roleName: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontFamily: 'DMSans_700Bold',
-  },
-  roleRate: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberName: {
-    fontSize: 14,
-    color: Colors.text,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  memberExp: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-    marginTop: 1,
-  },
-  memberRight: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  miniRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  miniRatingText: {
-    fontSize: 11,
-    color: Colors.primary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  memberRate: {
-    fontSize: 11,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_400Regular',
-  },
-  messageSection: {
-    gap: 8,
-  },
-  messageInput: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 14,
-    minHeight: 120,
-    fontSize: 14,
-    color: Colors.text,
-    fontFamily: 'DMSans_400Regular',
-    lineHeight: 20,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: Colors.surfaceLight,
-  },
-  editBtnText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  inviteBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-  },
-  inviteBtnText: {
-    fontSize: 14,
-    color: Colors.background,
-    fontFamily: 'DMSans_700Bold',
-  },
-  successContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-    gap: 16,
-  },
-  successIcon: {
-    marginBottom: 8,
-  },
-  successTitle: {
-    fontSize: 24,
-    color: Colors.text,
-    fontFamily: 'DMSans_700Bold',
-  },
-  successText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_400Regular',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  doneBtn: {
-    marginTop: 16,
-    paddingHorizontal: 40,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: Colors.primary,
-  },
-  doneBtnText: {
-    fontSize: 16,
-    color: Colors.background,
-    fontFamily: 'DMSans_700Bold',
-  },
-});

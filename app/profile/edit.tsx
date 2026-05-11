@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,19 +12,104 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '@/constants/colors';
+import { useColors } from '@/lib/ThemeContext';
+import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { AvailabilityStatus } from '@/lib/types';
 import * as Haptics from 'expo-haptics';
 
 const AVAILABILITY_OPTIONS: { key: AvailabilityStatus; label: string; color: string }[] = [
-  { key: 'available', label: 'Available', color: Colors.accentGreen },
-  { key: 'busy', label: 'Busy', color: Colors.accentOrange },
-  { key: 'not_available', label: 'Not Available', color: Colors.accentRed },
+  { key: 'available', label: 'Available', color: '#34C759' },
+  { key: 'busy', label: 'Busy', color: '#FF9500' },
+  { key: 'not_available', label: 'Not Available', color: '#FF3B30' },
 ];
+
+function makeStyles(C: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: C.border,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: C.surfaceLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    topBarTitle: {
+      fontSize: 17,
+      color: C.text,
+      fontFamily: 'DMSans_600SemiBold',
+    },
+    field: {
+      marginBottom: 20,
+    },
+    label: {
+      fontSize: 13,
+      color: C.textTertiary,
+      fontFamily: 'DMSans_600SemiBold',
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
+      marginBottom: 8,
+    },
+    input: {
+      backgroundColor: C.surface,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: 15,
+      color: C.text,
+      fontFamily: 'DMSans_400Regular',
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    textArea: {
+      height: 100,
+      textAlignVertical: 'top',
+    },
+    availOptions: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    availChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: C.border,
+      backgroundColor: C.surface,
+    },
+    availDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    availText: {
+      fontSize: 13,
+      color: C.textSecondary,
+      fontFamily: 'DMSans_500Medium',
+    },
+  });
+}
 
 export default function EditProfileScreen() {
   const insets = useSafeAreaInsets();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { myProfile, updateProfile } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
@@ -63,11 +148,11 @@ export default function EditProfileScreen() {
     <View style={[styles.container, { paddingTop: topPadding }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="close" size={24} color={Colors.text} />
+          <Ionicons name="close" size={24} color={C.text} />
         </Pressable>
         <Text style={styles.topBarTitle}>Edit Profile</Text>
         <Pressable onPress={handleSave}>
-          <Ionicons name="checkmark" size={26} color={Colors.primary} />
+          <Ionicons name="checkmark" size={26} color={C.primary} />
         </Pressable>
       </View>
 
@@ -82,7 +167,7 @@ export default function EditProfileScreen() {
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
           />
         </View>
 
@@ -93,7 +178,7 @@ export default function EditProfileScreen() {
             value={title}
             onChangeText={setTitle}
             placeholder="e.g. Actor & Filmmaker"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
           />
         </View>
 
@@ -105,7 +190,7 @@ export default function EditProfileScreen() {
             onChangeText={setBio}
             multiline
             numberOfLines={4}
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
           />
         </View>
 
@@ -115,7 +200,7 @@ export default function EditProfileScreen() {
             style={styles.input}
             value={location}
             onChangeText={setLocation}
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
           />
         </View>
 
@@ -126,7 +211,7 @@ export default function EditProfileScreen() {
             value={experience}
             onChangeText={setExperience}
             placeholder="e.g. 6 years"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
           />
         </View>
 
@@ -138,7 +223,7 @@ export default function EditProfileScreen() {
             onChangeText={setSkills}
             multiline
             placeholder="Acting, Direction, Screenwriting"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
           />
         </View>
 
@@ -177,7 +262,7 @@ export default function EditProfileScreen() {
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
           />
         </View>
 
@@ -188,90 +273,10 @@ export default function EditProfileScreen() {
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
-            placeholderTextColor={Colors.textTertiary}
+            placeholderTextColor={C.textTertiary}
           />
         </View>
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topBarTitle: {
-    fontSize: 17,
-    color: Colors.text,
-    fontFamily: 'DMSans_600SemiBold',
-  },
-  field: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 13,
-    color: Colors.textTertiary,
-    fontFamily: 'DMSans_600SemiBold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: Colors.text,
-    fontFamily: 'DMSans_400Regular',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  availOptions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  availChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  availDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  availText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontFamily: 'DMSans_500Medium',
-  },
-});
