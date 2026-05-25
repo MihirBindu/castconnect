@@ -82,7 +82,13 @@ const NETWORK_PHRASES = [
 
 export function isNetworkError(err: unknown): boolean {
   if (err instanceof NetworkError) return true;
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  const msg = (
+    err instanceof Error ? err.message
+    : typeof err === 'string' ? err
+    : err !== null && typeof err === 'object' && 'message' in err
+      ? String((err as { message: unknown }).message)
+      : String(err)
+  ).toLowerCase();
   return NETWORK_PHRASES.some(p => msg.includes(p));
 }
 
