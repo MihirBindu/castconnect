@@ -2,6 +2,33 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { createLogger } from './logger';
 
+// ── Critical patch ────────────────────────────────────────────────────────────
+// React Native uses whatwg-fetch as its fetch polyfill. whatwg-fetch calls
+// reject() inside setTimeout(fn, 0) in its xhr.onerror handler. In Hermes /
+// React Native the runtime reports that setTimeout-sourced rejection as
+// "unhandled" before the outer async function's catch clause runs, producing
+// the red ERROR boxes in dev even though the error IS caught upstream.
+//
+// Wrapping global.fetch so we immediately attach .then(resolve, reject) gives
+// Hermes a synchronous handler on the inner promise, making the rejection
+// "handled" before the setTimeout fires.
+// ---------------------------------------------------------------------------
+(function patchFetch() {
+  if (typeof global === 'undefined') return;
+  const g = global as Record<string, unknown>;
+  if (typeof g.fetch !== 'function') return;
+  const _orig = g.fetch as typeof fetch;
+  g.fetch = function safeFetch(
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> {
+    return new Promise<Response>((resolve, reject) => {
+      _orig(input, init).then(resolve, reject);
+    });
+  };
+})();
+// ─────────────────────────────────────────────────────────────────────────────
+
 const log = createLogger('supabase');
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
