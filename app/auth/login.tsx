@@ -14,7 +14,7 @@ import {
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
+import * as Linking from 'expo-linking';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { supabase } from '@/lib/supabase';
 import { createLogger } from '@/lib/logger';
@@ -53,34 +53,167 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     log.info('Google sign-in initiated');
-    try {
-      const redirectUrl = makeRedirectUri({ scheme: 'myapp' });
 
+    // ── Redirect URL strategy ────────────────────────────────────────────────
+    // Linking.createURL('/') returns the right URL for every context:
+    //   • Expo Go / Android  →  exp://IP:PORT/--/
+    //   • Standalone build   →  myapp:///
+    //   • Web (Replit)       →  https://...replit.dev/
+    //
+    // Why exp:// (not myapp://) for Expo Go:
+    //   RedirectUriReceiverActivity (expo-web-browser) has "myapp://" in its
+    //   compile-time intent-filter. In Expo Go's pre-built APK, myapp:// is
+    //   never registered — Chrome fires the intent, no handler exists, and
+    //   the Custom Tab stays open forever. openAuthSessionAsync never resolves.
+    //
+    //   exp:// IS registered in Expo Go's APK. Chrome fires exp://, Expo Go's
+    //   main Activity receives it and delivers it to Linking — which is exactly
+    //   what PATH A listens for.
+    //
+    // Add the exact value logged below to Supabase → Auth → URL Configuration
+    // → Redirect URLs. Example: exp://10.48.210.114:8081/--/
+    // (Remove any exp://** wildcard — GoTrue parses its host as "**" with an
+    // empty path, which never matches /--/ and falls back to Site URL.)
+    // ─────────────────────────────────────────────────────────────────────────
+    const redirectUrl = Linking.createURL('/');
+    log.debug('Google sign-in redirectUrl', { redirectUrl, platform: Platform.OS });
+
+    // Shared flag so only one path calls exchangeCodeForSession
+    let sessionResolved = false;
+    let linkSub: ReturnType<typeof Linking.addEventListener> | null = null;
+
+    const exchangeCode = async (url: string, source: 'deep-link' | 'web-browser') => {
+      if (sessionResolved) return;
+      sessionResolved = true;
+      linkSub?.remove();
+
+      log.debug('Processing auth redirect', { source, url: url.substring(0, 100) });
+
+      // Parse params from both query string (?code=…) and hash fragment (#access_token=…).
+      // GoTrue uses PKCE by default (code in query) but may fall back to implicit flow
+      // (tokens in hash) depending on client configuration and server version.
+      const hashIdx = url.indexOf('#');
+      const queryIdx = url.indexOf('?');
+      const params: Record<string, string> = {};
+      const parseSegment = (seg: string) => {
+        seg.split('&').forEach(p => {
+          const eq = p.indexOf('=');
+          if (eq > 0) params[p.slice(0, eq)] = decodeURIComponent(p.slice(eq + 1).replace(/\+/g, ' '));
+        });
+      };
+      if (hashIdx >= 0) parseSegment(url.slice(hashIdx + 1));
+      if (queryIdx >= 0) parseSegment(url.slice(queryIdx + 1, hashIdx >= 0 ? hashIdx : undefined));
+
+      log.debug('Auth redirect params', {
+        source,
+        hasCode: 'code' in params,
+        hasAccessToken: 'access_token' in params,
+        hasError: 'error' in params,
+        error: params.error,
+      });
+
+      try {
+        if (params.error) {
+          throw new Error(params.error_description ?? params.error);
+        } else if (params.code) {
+          // PKCE flow — exchange auth code for session
+          const { data: sd, error: sessionError } = await supabase.auth.exchangeCodeForSession(url);
+          if (sessionError) throw sessionError;
+          log.info('Google sign-in successful (PKCE)', { source, userId: sd.user?.id });
+        } else if (params.access_token) {
+          // Implicit flow — GoTrue sent tokens directly in URL fragment
+          const { data: sd, error: sessionError } = await supabase.auth.setSession({
+            access_token: params.access_token,
+            refresh_token: params.refresh_token ?? '',
+          });
+          if (sessionError) throw sessionError;
+          log.info('Google sign-in successful (implicit)', { source, userId: sd.user?.id });
+        } else {
+          throw new Error('No auth code or token received from sign-in redirect');
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Sign-in processing failed';
+        log.error('Auth redirect processing failed', { source, message });
+        Alert.alert('Sign-In Failed', message);
+      }
+
+      setGoogleLoading(false);
+    };
+
+    try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: true,
-        },
+        options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
       });
 
       if (error) throw error;
       if (!data.url) throw new Error('No OAuth URL received from Supabase');
 
+      log.debug('OAuth URL check', {
+        oauthUrlHasLocalhost: data.url.includes('localhost'),
+        hasOurRedirect: data.url.includes(encodeURIComponent(redirectUrl)),
+        oauthUrlPreview: data.url.substring(0, 120),
+      });
+
+      // PATH A — primary path for Expo Go / Android
+      // exp:// is Expo Go's own scheme, so Chrome delivers it to Expo Go's main
+      // Activity via onNewIntent, which triggers Linking. RedirectUriReceiverActivity
+      // is NOT involved for exp://, so openAuthSessionAsync (Path B) won't resolve
+      // via the redirect — Path A is what actually closes the loop.
+      // In a standalone build, myapp:// IS registered, so either path may fire first.
+      linkSub = Linking.addEventListener('url', ({ url }) => {
+        log.debug('PATH A: deep link received', { url: url.substring(0, 100) });
+        linkSub?.remove();
+        // dismissBrowser() may return undefined on some platforms — guard before .catch()
+        void WebBrowser.dismissBrowser?.()?.catch?.(() => {});
+        exchangeCode(url, 'deep-link');
+      });
+
+      log.debug('Opening browser for Google OAuth');
+
+      // PATH B — primary path for standalone builds / iOS
+      // openAuthSessionAsync resolves when RedirectUriReceiverActivity (Android)
+      // or SFAuthenticationSession (iOS) intercepts the redirect URL.
+      // On Expo Go this typically resolves as 'cancel'/'dismiss' after Path A
+      // dismisses the browser — sessionResolved flag prevents double processing.
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
+      // ── This log is critical — if it never appears the browser is still open ──
+      log.debug('PATH B: WebBrowser resolved', {
+        type: result.type,
+        sessionAlreadyResolved: sessionResolved,
+        returnedUrl: result.type === 'success' ? result.url.substring(0, 100) : '(none)',
+      });
+
       if (result.type === 'success') {
-        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
-        if (sessionError) throw sessionError;
-        log.info('Google sign-in successful');
-        router.replace('/(tabs)');
+        await exchangeCode(result.url, 'web-browser');
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        if (!sessionResolved) {
+          linkSub?.remove();
+          log.info('Google sign-in cancelled by user', { type: result.type });
+          setGoogleLoading(false);
+        }
+      } else {
+        // e.g. 'locked' on Android — browser already open, or unknown type
+        // MUST clear loading here or the spinner hangs forever
+        log.warn('WebBrowser unexpected type — clearing loading', {
+          type: result.type,
+          sessionAlreadyResolved: sessionResolved,
+        });
+        if (!sessionResolved) {
+          linkSub?.remove();
+          setGoogleLoading(false);
+        }
       }
+
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Google sign-in failed';
-      log.error('Google sign-in error', { message });
-      Alert.alert('Sign-In Failed', message);
-    } finally {
-      setGoogleLoading(false);
+      linkSub?.remove();
+      if (!sessionResolved) {
+        const message = err instanceof Error ? err.message : 'Google sign-in failed';
+        log.error('Google sign-in error', { message });
+        Alert.alert('Sign-In Failed', message);
+        setGoogleLoading(false);
+      }
     }
   };
 
