@@ -3,10 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { Session } from '@supabase/supabase-js';
 import { AppContext, AppState } from './store';
-import { supabase, isNetworkError, NetworkError } from './supabase';
+import { supabase, isNetworkError, NetworkError, networkErrorMessage } from './supabase';
 import { createLogger } from './logger';
-
-const log = createLogger('AppProvider');
 import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole } from './types';
 import { getProfile, getProfiles } from './api/profiles';
 import { getCastingCalls } from './api/castingCalls';
@@ -20,6 +18,8 @@ import {
   SAMPLE_MESSAGES,
   SAMPLE_APPLICATIONS,
 } from './mock-data';
+
+const log = createLogger('AppProvider');
 
 const STORAGE_KEYS = {
   PROFILE: '@cc_profile',
@@ -43,6 +43,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   const [isOffline, setIsOffline] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Stable ref so retryLoad callback doesn't go stale
   const sessionRef = useRef<Session | null>(session);
   useEffect(() => { sessionRef.current = session; }, [session]);
 
@@ -67,6 +68,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
         getConversations(userId),
         getMyApplications(userId),
       ]);
+
       if (profile) {
         setMyProfile(profile);
       } else {
@@ -76,11 +78,18 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
       if (calls.length) setCastingCalls(calls);
       if (convs.length) setConversations(convs);
       if (apps.length) setApplications(apps);
-      log.info('loadFromSupabase complete', { profiles: allProfiles.length, calls: calls.length, convs: convs.length, apps: apps.length });
+
+      log.info('loadFromSupabase complete', {
+        profiles: allProfiles.length,
+        calls: calls.length,
+        convs: convs.length,
+        apps: apps.length,
+      });
     } catch (err: unknown) {
       if (err instanceof NetworkError || isNetworkError(err)) {
-        log.warn('loadFromSupabase: network unavailable — falling back to cached data', { userId });
+        log.warn('loadFromSupabase: network unavailable, using cached data', { userId });
         setIsOffline(true);
+        // Fall back to whatever is in local storage; keep mock data if storage is empty
         await loadData({ silent: true });
       } else {
         const msg = err instanceof Error ? err.message : String(err);
@@ -94,7 +103,10 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
 
   const loadData = async (opts?: { silent?: boolean }) => {
     log.debug('loadData (local storage)');
-    if (!opts?.silent) { setIsLoading(true); setLoadError(null); }
+    if (!opts?.silent) {
+      setIsLoading(true);
+      setLoadError(null);
+    }
     try {
       const [profileData, appData, convData, msgData, crewData, crewProjData] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
@@ -129,6 +141,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     }
   }, []);
 
+  // ── Persistence helpers ──────────────────────────────────────────────────
+
   const saveProfile = async (profile: UserProfile) => {
     try { await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile)); } catch { /* no-op */ }
   };
@@ -144,6 +158,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   const saveCrewBasket = async (items: CrewBasketItem[]) => {
     try { await AsyncStorage.setItem(STORAGE_KEYS.CREW_BASKET, JSON.stringify(items)); } catch { /* no-op */ }
   };
+
+  // ── Mutations ────────────────────────────────────────────────────────────
 
   const updateProfile = useCallback((updates: Partial<UserProfile>) => {
     setMyProfile(prev => {

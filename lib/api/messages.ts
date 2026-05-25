@@ -31,7 +31,10 @@ export async function getMessages(myId: string, otherId: string): Promise<Messag
       read: row.read,
     }));
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('getMessages: network unavailable', { myId, otherId }); return []; }
+    if (isNetworkError(err)) {
+      log.warn('getMessages: network unavailable', { myId, otherId });
+      return [];
+    }
     log.error('getMessages threw', { message: err instanceof Error ? err.message : String(err) });
     return [];
   }
@@ -65,7 +68,10 @@ export async function sendMessage(senderId: string, receiverId: string, content:
       read: data.read,
     };
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('sendMessage: network unavailable'); return null; }
+    if (isNetworkError(err)) {
+      log.warn('sendMessage: network unavailable');
+      return null;
+    }
     log.error('sendMessage threw', { message: err instanceof Error ? err.message : String(err) });
     return null;
   }
@@ -85,7 +91,10 @@ export async function markMessagesRead(myId: string, senderId: string): Promise<
       log.error('markMessagesRead failed', { code: error.code, message: error.message });
     }
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('markMessagesRead: network unavailable', { myId, senderId }); return; }
+    if (isNetworkError(err)) {
+      log.warn('markMessagesRead: network unavailable', { myId, senderId });
+      return;
+    }
     log.error('markMessagesRead threw', { message: err instanceof Error ? err.message : String(err) });
   }
 }

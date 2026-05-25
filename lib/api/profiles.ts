@@ -114,7 +114,10 @@ export async function updateProfile(id: string, updates: Partial<UserProfile>): 
     log.info('updateProfile success', { id });
     return true;
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('updateProfile: network unavailable', { id }); return false; }
+    if (isNetworkError(err)) {
+      log.warn('updateProfile: network unavailable', { id });
+      return false;
+    }
     log.error('updateProfile threw', { id, message: err instanceof Error ? err.message : String(err) });
     return false;
   }
@@ -133,7 +136,10 @@ async function getConnectionIds(userId: string): Promise<string[]> {
     }
     return (data ?? []).map((r) => r.following_id);
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('getConnectionIds: network unavailable', { userId }); return []; }
+    if (isNetworkError(err)) {
+      log.warn('getConnectionIds: network unavailable', { userId });
+      return [];
+    }
     log.error('getConnectionIds threw', { userId, message: err instanceof Error ? err.message : String(err) });
     return [];
   }
@@ -171,7 +177,10 @@ export async function toggleConnection(myId: string, targetId: string): Promise<
     }
     return true;
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('toggleConnection: network unavailable', { myId, targetId }); return false; }
+    if (isNetworkError(err)) {
+      log.warn('toggleConnection: network unavailable', { myId, targetId });
+      return false;
+    }
     log.error('toggleConnection threw', { message: err instanceof Error ? err.message : String(err) });
     return false;
   }

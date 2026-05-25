@@ -25,6 +25,22 @@ const log = createLogger('RootLayout');
 
 SplashScreen.preventAutoHideAsync();
 
+// ── Suppress unhandled network rejections from Supabase's background
+//    token-refresh timer so they don't appear as red error boxes in dev.
+if (typeof globalThis !== 'undefined') {
+  const _origHandler = (globalThis as Record<string, unknown>).onunhandledrejection;
+  (globalThis as Record<string, unknown>).onunhandledrejection = (event: PromiseRejectionEvent) => {
+    if (isNetworkError(event?.reason)) {
+      log.warn('Suppressed unhandled network rejection', {
+        message: event?.reason instanceof Error ? event.reason.message : String(event?.reason),
+      });
+      event?.preventDefault?.();
+      return;
+    }
+    if (typeof _origHandler === 'function') (_origHandler as (e: PromiseRejectionEvent) => void)(event);
+  };
+}
+
 function RootLayoutNav() {
   const { mode } = useTheme();
   return (
@@ -61,10 +77,13 @@ export default function RootLayout() {
 
   useEffect(() => {
     log.info('Fetching initial session');
+
     supabase.auth.getSession()
       .then(({ data, error }) => {
         if (error) {
           if (isNetworkError({ message: error.message })) {
+            // Network down during token refresh — treat as "no session" so the
+            // login screen shows, but log as warn not error.
             log.warn('getSession: network error during token refresh', { message: error.message });
           } else {
             log.error('Failed to get session', { message: error.message });
@@ -88,13 +107,17 @@ export default function RootLayout() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       log.info('Auth state changed', { event, userId: s?.user.id });
       setSession(s);
-      // Only redirect on an explicit sign-out, not on any transient null session
+
       if (event === 'SIGNED_OUT') {
         router.replace('/auth/login');
       }
+
+      // Don't redirect when the session simply becomes null due to a network
+      // hiccup — only act on an explicit SIGNED_OUT event.
       if (!s && event !== 'INITIAL_SESSION' && event !== 'SIGNED_OUT' && event !== 'TOKEN_REFRESHED') {
         router.replace('/auth/login');
       }
+
       if (event === 'TOKEN_REFRESHED') {
         log.info('Token refreshed successfully');
       }

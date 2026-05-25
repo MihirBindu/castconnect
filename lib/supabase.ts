@@ -76,7 +76,7 @@ const NETWORK_PHRASES = [
   'the internet connection appears to be offline',
   'could not connect to the server',
   'socket hang up',
-  'load failed',
+  'load failed',          // iOS WKWebView offline
   'software caused connection abort',
 ];
 

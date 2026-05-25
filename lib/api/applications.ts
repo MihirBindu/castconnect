@@ -59,7 +59,10 @@ export async function applyToCastingCall(castingCallId: string, applicantId: str
     log.info('applyToCastingCall success', { castingCallId, applicantId });
     return true;
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('applyToCastingCall: network unavailable', { castingCallId }); return false; }
+    if (isNetworkError(err)) {
+      log.warn('applyToCastingCall: network unavailable', { castingCallId, applicantId });
+      return false;
+    }
     log.error('applyToCastingCall threw', { message: err instanceof Error ? err.message : String(err) });
     return false;
   }
@@ -80,7 +83,10 @@ export async function hasApplied(castingCallId: string, applicantId: string): Pr
     }
     return !!data;
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('hasApplied: network unavailable', { castingCallId }); return false; }
+    if (isNetworkError(err)) {
+      log.warn('hasApplied: network unavailable', { castingCallId, applicantId });
+      return false;
+    }
     log.error('hasApplied threw', { message: err instanceof Error ? err.message : String(err) });
     return false;
   }

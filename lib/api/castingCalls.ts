@@ -73,7 +73,10 @@ export async function getCastingCall(id: string): Promise<CastingCall | null> {
     log.info('getCastingCall success', { id });
     return toCastingCall(data);
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('getCastingCall: network unavailable', { id }); return null; }
+    if (isNetworkError(err)) {
+      log.warn('getCastingCall: network unavailable', { id });
+      return null;
+    }
     log.error('getCastingCall threw', { id, message: err instanceof Error ? err.message : String(err) });
     return null;
   }
@@ -111,7 +114,10 @@ export async function createCastingCall(
     log.info('createCastingCall success', { id: data?.id });
     return data ? toCastingCall(data) : null;
   } catch (err: unknown) {
-    if (isNetworkError(err)) { log.warn('createCastingCall: network unavailable'); return null; }
+    if (isNetworkError(err)) {
+      log.warn('createCastingCall: network unavailable');
+      return null;
+    }
     log.error('createCastingCall threw', { message: err instanceof Error ? err.message : String(err) });
     return null;
   }
