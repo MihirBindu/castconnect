@@ -1,6 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Stack, router } from "expo-router";
+import { Stack, router, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -24,22 +24,6 @@ import { createLogger } from "@/lib/logger";
 const log = createLogger('RootLayout');
 
 SplashScreen.preventAutoHideAsync();
-
-// ── Suppress unhandled network rejections from Supabase's background
-//    token-refresh timer so they don't appear as red error boxes in dev.
-if (typeof globalThis !== 'undefined') {
-  const _origHandler = (globalThis as Record<string, unknown>).onunhandledrejection;
-  (globalThis as Record<string, unknown>).onunhandledrejection = (event: PromiseRejectionEvent) => {
-    if (isNetworkError(event?.reason)) {
-      log.warn('Suppressed unhandled network rejection', {
-        message: event?.reason instanceof Error ? event.reason.message : String(event?.reason),
-      });
-      event?.preventDefault?.();
-      return;
-    }
-    if (typeof _origHandler === 'function') (_origHandler as (e: PromiseRejectionEvent) => void)(event);
-  };
-}
 
 function RootLayoutNav() {
   const { mode } = useTheme();
@@ -68,6 +52,11 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  // Track the current route segment so we never navigate to a screen we're
+  // already on — without this guard router.replace('/auth/login') causes
+  // Expo Router to tear down and remount the root layout, creating an
+  // infinite redirect loop.
+  const segments = useSegments();
 
   useEffect(() => {
     if (fontError) {
@@ -81,9 +70,7 @@ export default function RootLayout() {
     supabase.auth.getSession()
       .then(({ data, error }) => {
         if (error) {
-          if (isNetworkError({ message: error.message })) {
-            // Network down during token refresh — treat as "no session" so the
-            // login screen shows, but log as warn not error.
+          if (isNetworkError(error)) {
             log.warn('getSession: network error during token refresh', { message: error.message });
           } else {
             log.error('Failed to get session', { message: error.message });
@@ -107,17 +94,6 @@ export default function RootLayout() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       log.info('Auth state changed', { event, userId: s?.user.id });
       setSession(s);
-
-      if (event === 'SIGNED_OUT') {
-        router.replace('/auth/login');
-      }
-
-      // Don't redirect when the session simply becomes null due to a network
-      // hiccup — only act on an explicit SIGNED_OUT event.
-      if (!s && event !== 'INITIAL_SESSION' && event !== 'SIGNED_OUT' && event !== 'TOKEN_REFRESHED') {
-        router.replace('/auth/login');
-      }
-
       if (event === 'TOKEN_REFRESHED') {
         log.info('Token refreshed successfully');
       }
@@ -129,16 +105,25 @@ export default function RootLayout() {
     };
   }, []);
 
+  // Single source of truth for all auth-driven navigation.
+  // `segments` tells us where the router currently is so we never call
+  // router.replace to a screen we're already on — that's what was causing
+  // the remount loop.
   useEffect(() => {
-    if ((fontsLoaded || fontError) && session !== undefined) {
-      log.info('App ready — hiding splash screen', { hasSession: !!session });
-      SplashScreen.hideAsync();
-      if (!session) {
-        log.info('No session — redirecting to login');
-        router.replace('/auth/login');
-      }
+    if ((!fontsLoaded && !fontError) || session === undefined) return;
+
+    SplashScreen.hideAsync();
+
+    const inAuth = segments[0] === 'auth';
+
+    if (!session && !inAuth) {
+      log.info('No session — redirecting to login');
+      router.replace('/auth/login');
+    } else if (session && inAuth) {
+      log.info('Session active — redirecting to app');
+      router.replace('/(tabs)');
     }
-  }, [fontsLoaded, fontError, session]);
+  }, [fontsLoaded, fontError, session, segments]);
 
   if ((!fontsLoaded && !fontError) || session === undefined) {
     return null;
