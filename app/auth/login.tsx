@@ -87,15 +87,56 @@ export default function LoginScreen() {
       sessionResolved = true;
       linkSub?.remove();
 
-      log.debug('Exchanging code for session', { source, url: url.substring(0, 100) });
-      const { data: sd, error: sessionError } = await supabase.auth.exchangeCodeForSession(url);
-      if (sessionError) {
-        log.error('exchangeCodeForSession failed', { source, message: sessionError.message });
-        Alert.alert('Sign-In Failed', sessionError.message);
-      } else {
-        log.info('Google sign-in successful', { source, userId: sd.user?.id });
-        // Navigation handled by auth state listener in _layout.tsx
+      log.debug('Processing auth redirect', { source, url: url.substring(0, 100) });
+
+      // Parse params from both query string (?code=…) and hash fragment (#access_token=…).
+      // GoTrue uses PKCE by default (code in query) but may fall back to implicit flow
+      // (tokens in hash) depending on client configuration and server version.
+      const hashIdx = url.indexOf('#');
+      const queryIdx = url.indexOf('?');
+      const params: Record<string, string> = {};
+      const parseSegment = (seg: string) => {
+        seg.split('&').forEach(p => {
+          const eq = p.indexOf('=');
+          if (eq > 0) params[p.slice(0, eq)] = decodeURIComponent(p.slice(eq + 1).replace(/\+/g, ' '));
+        });
+      };
+      if (hashIdx >= 0) parseSegment(url.slice(hashIdx + 1));
+      if (queryIdx >= 0) parseSegment(url.slice(queryIdx + 1, hashIdx >= 0 ? hashIdx : undefined));
+
+      log.debug('Auth redirect params', {
+        source,
+        hasCode: 'code' in params,
+        hasAccessToken: 'access_token' in params,
+        hasError: 'error' in params,
+        error: params.error,
+      });
+
+      try {
+        if (params.error) {
+          throw new Error(params.error_description ?? params.error);
+        } else if (params.code) {
+          // PKCE flow — exchange auth code for session
+          const { data: sd, error: sessionError } = await supabase.auth.exchangeCodeForSession(url);
+          if (sessionError) throw sessionError;
+          log.info('Google sign-in successful (PKCE)', { source, userId: sd.user?.id });
+        } else if (params.access_token) {
+          // Implicit flow — GoTrue sent tokens directly in URL fragment
+          const { data: sd, error: sessionError } = await supabase.auth.setSession({
+            access_token: params.access_token,
+            refresh_token: params.refresh_token ?? '',
+          });
+          if (sessionError) throw sessionError;
+          log.info('Google sign-in successful (implicit)', { source, userId: sd.user?.id });
+        } else {
+          throw new Error('No auth code or token received from sign-in redirect');
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Sign-in processing failed';
+        log.error('Auth redirect processing failed', { source, message });
+        Alert.alert('Sign-In Failed', message);
       }
+
       setGoogleLoading(false);
     };
 
@@ -123,7 +164,8 @@ export default function LoginScreen() {
       linkSub = Linking.addEventListener('url', ({ url }) => {
         log.debug('PATH A: deep link received', { url: url.substring(0, 100) });
         linkSub?.remove();
-        WebBrowser.dismissBrowser().catch(() => {});
+        // dismissBrowser() may return undefined on some platforms — guard before .catch()
+        void WebBrowser.dismissBrowser?.()?.catch?.(() => {});
         exchangeCode(url, 'deep-link');
       });
 
