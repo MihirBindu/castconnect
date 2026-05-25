@@ -55,27 +55,27 @@ export default function LoginScreen() {
     log.info('Google sign-in initiated');
 
     // ── Redirect URL strategy ────────────────────────────────────────────────
-    // We need a URL that satisfies ALL THREE of:
-    //   1. Supabase allows it in the redirect URL allowlist
-    //   2. Chrome Custom Tab can fire an Android intent for it
-    //   3. RedirectUriReceiverActivity (expo-web-browser) can intercept it
+    // Linking.createURL('/') returns the right URL for every context:
+    //   • Expo Go / Android  →  exp://IP:PORT/--/
+    //   • Standalone build   →  myapp:///
+    //   • Web (Replit)       →  https://...replit.dev/
     //
-    // exp://IP:PORT/--/ fails condition 1 and 3:
-    //   - Supabase's allowlist URL parser splits exp://** into scheme=exp,
-    //     host=**, path="" — empty path doesn't match /--/, so validation fails
-    //     and Supabase falls back to Site URL (localhost:3000).
-    //   - Even if it reached Chrome, RedirectUriReceiverActivity's intent-filter
-    //     only lists "myapp://" (from app.json scheme), never "exp://".
+    // Why exp:// (not myapp://) for Expo Go:
+    //   RedirectUriReceiverActivity (expo-web-browser) has "myapp://" in its
+    //   compile-time intent-filter. In Expo Go's pre-built APK, myapp:// is
+    //   never registered — Chrome fires the intent, no handler exists, and
+    //   the Custom Tab stays open forever. openAuthSessionAsync never resolves.
     //
-    // myapp:// satisfies all three:
-    //   1. Already in Supabase allowlist ✅
-    //   2. Chrome fires android.intent.action.VIEW for myapp:// ✅
-    //   3. RedirectUriReceiverActivity has myapp:// in its intent-filter ✅
+    //   exp:// IS registered in Expo Go's APK. Chrome fires exp://, Expo Go's
+    //   main Activity receives it and delivers it to Linking — which is exactly
+    //   what PATH A listens for.
     //
-    // On web (Platform.OS === 'web'), Linking.createURL returns the Replit
-    // HTTPS URL which matches https://*.replit.dev/** in the allowlist.
+    // Add the exact value logged below to Supabase → Auth → URL Configuration
+    // → Redirect URLs. Example: exp://10.48.210.114:8081/--/
+    // (Remove any exp://** wildcard — GoTrue parses its host as "**" with an
+    // empty path, which never matches /--/ and falls back to Site URL.)
     // ─────────────────────────────────────────────────────────────────────────
-    const redirectUrl = Platform.OS === 'web' ? Linking.createURL('/') : 'myapp://';
+    const redirectUrl = Linking.createURL('/');
     log.debug('Google sign-in redirectUrl', { redirectUrl, platform: Platform.OS });
 
     // Shared flag so only one path calls exchangeCodeForSession
@@ -114,10 +114,12 @@ export default function LoginScreen() {
         oauthUrlPreview: data.url.substring(0, 120),
       });
 
-      // PATH A — deep link safety net
-      // Primary path is Path B (RedirectUriReceiverActivity intercepts myapp://).
-      // This listener fires if somehow the URL arrives via Linking instead
-      // (e.g. Expo Go routes myapp:// to onNewIntent before RedirectUriReceiverActivity).
+      // PATH A — primary path for Expo Go / Android
+      // exp:// is Expo Go's own scheme, so Chrome delivers it to Expo Go's main
+      // Activity via onNewIntent, which triggers Linking. RedirectUriReceiverActivity
+      // is NOT involved for exp://, so openAuthSessionAsync (Path B) won't resolve
+      // via the redirect — Path A is what actually closes the loop.
+      // In a standalone build, myapp:// IS registered, so either path may fire first.
       linkSub = Linking.addEventListener('url', ({ url }) => {
         log.debug('PATH A: deep link received', { url: url.substring(0, 100) });
         linkSub?.remove();
@@ -127,7 +129,11 @@ export default function LoginScreen() {
 
       log.debug('Opening browser for Google OAuth');
 
-      // PATH B — WebBrowser (primary on Android: RedirectUriReceiverActivity catches myapp://)
+      // PATH B — primary path for standalone builds / iOS
+      // openAuthSessionAsync resolves when RedirectUriReceiverActivity (Android)
+      // or SFAuthenticationSession (iOS) intercepts the redirect URL.
+      // On Expo Go this typically resolves as 'cancel'/'dismiss' after Path A
+      // dismisses the browser — sessionResolved flag prevents double processing.
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
       // ── This log is critical — if it never appears the browser is still open ──
