@@ -62,6 +62,17 @@ export default function LoginScreen() {
       const redirectUrl = Linking.createURL('/');
       log.debug('Google sign-in redirectUrl', { redirectUrl });
 
+      // ── Dev guard ─────────────────────────────────────────────────────────
+      // If Google OAuth still lands on localhost after this, open Supabase →
+      // Authentication → URL Configuration → Redirect URLs and add the EXACT
+      // URL printed below. The IP changes per Wi-Fi network so you may need
+      // to re-add it whenever you switch networks. Adding exp://** (wildcard)
+      // should also work if Supabase's glob covers non-HTTP schemes.
+      if (__DEV__) {
+        log.warn('SUPABASE: ensure this URL is in Redirect URLs allowlist', { redirectUrl });
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
