@@ -54,29 +54,29 @@ export default function LoginScreen() {
     setGoogleLoading(true);
     log.info('Google sign-in initiated');
 
-    // ── Why two paths? ───────────────────────────────────────────────────────
-    // openAuthSessionAsync uses RedirectUriReceiverActivity to detect redirects.
-    // That activity's intent-filter is generated from app.json's "scheme" field
-    // ("myapp://"), so it only intercepts myapp:// URLs — NOT exp://.
+    // ── Redirect URL strategy ────────────────────────────────────────────────
+    // We need a URL that satisfies ALL THREE of:
+    //   1. Supabase allows it in the redirect URL allowlist
+    //   2. Chrome Custom Tab can fire an Android intent for it
+    //   3. RedirectUriReceiverActivity (expo-web-browser) can intercept it
     //
-    // In Expo Go on Android, Supabase redirects to exp://IP:PORT/--/. Chrome
-    // fires an Android intent for exp:// which opens Expo Go directly, bypassing
-    // RedirectUriReceiverActivity. openAuthSessionAsync never resolves.
+    // exp://IP:PORT/--/ fails condition 1 and 3:
+    //   - Supabase's allowlist URL parser splits exp://** into scheme=exp,
+    //     host=**, path="" — empty path doesn't match /--/, so validation fails
+    //     and Supabase falls back to Site URL (localhost:3000).
+    //   - Even if it reached Chrome, RedirectUriReceiverActivity's intent-filter
+    //     only lists "myapp://" (from app.json scheme), never "exp://".
     //
-    // The exp:// URL DOES arrive at the running app via Linking (onNewIntent →
-    // Linking.emit). So we listen on BOTH paths and let whichever fires first win.
+    // myapp:// satisfies all three:
+    //   1. Already in Supabase allowlist ✅
+    //   2. Chrome fires android.intent.action.VIEW for myapp:// ✅
+    //   3. RedirectUriReceiverActivity has myapp:// in its intent-filter ✅
+    //
+    // On web (Platform.OS === 'web'), Linking.createURL returns the Replit
+    // HTTPS URL which matches https://*.replit.dev/** in the allowlist.
     // ─────────────────────────────────────────────────────────────────────────
-
-    // Linking.createURL resolves correctly per environment:
-    //   Expo Go native  → exp://IP:PORT/--/
-    //   standalone build → myapp://
-    //   web (Replit)     → https://<domain>/
-    const redirectUrl = Linking.createURL('/');
-    log.debug('Google sign-in redirectUrl', { redirectUrl });
-
-    if (__DEV__) {
-      log.warn('SUPABASE: ensure this URL is in Redirect URLs allowlist', { redirectUrl });
-    }
+    const redirectUrl = Platform.OS === 'web' ? Linking.createURL('/') : 'myapp://';
+    log.debug('Google sign-in redirectUrl', { redirectUrl, platform: Platform.OS });
 
     // Shared flag so only one path calls exchangeCodeForSession
     let sessionResolved = false;
@@ -114,8 +114,10 @@ export default function LoginScreen() {
         oauthUrlPreview: data.url.substring(0, 120),
       });
 
-      // PATH A — deep link (Android + Expo Go)
-      // Chrome fires exp:// intent → Expo Go receives it → Linking emits here
+      // PATH A — deep link safety net
+      // Primary path is Path B (RedirectUriReceiverActivity intercepts myapp://).
+      // This listener fires if somehow the URL arrives via Linking instead
+      // (e.g. Expo Go SDK older than 50 or a non-Chrome browser).
       linkSub = Linking.addEventListener('url', ({ url }) => {
         log.debug('Deep link received during OAuth', { url: url.substring(0, 100) });
         linkSub?.remove();
