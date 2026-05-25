@@ -229,12 +229,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceElevated,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
   },
   filterChipActive: {
-    backgroundColor: 'rgba(212, 168, 83, 0.15)',
+    backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
   filterText: {
@@ -243,7 +243,8 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans_500Medium',
   },
   filterTextActive: {
-    color: Colors.primary,
+    color: Colors.black,
+    fontFamily: 'DMSans_600SemiBold',
   },
   list: {
     padding: 20,

@@ -1,8 +1,17 @@
 import React, { useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
+import { Session } from '@supabase/supabase-js';
 import { AppContext, AppState } from './store';
+import { supabase } from './supabase';
+import { createLogger } from './logger';
+
+const log = createLogger('AppProvider');
 import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole } from './types';
+import { getProfile, getProfiles } from './api/profiles';
+import { getCastingCalls } from './api/castingCalls';
+import { getConversations, getMessages as fetchMessages } from './api/messages';
+import { getMyApplications } from './api/applications';
 import {
   MY_PROFILE,
   SAMPLE_PROFILES,
@@ -21,21 +30,61 @@ const STORAGE_KEYS = {
   CREW_PROJECT: '@cc_crew_project',
 };
 
-export function AppProvider({ children }: { children: ReactNode }) {
+export function AppProvider({ children, session }: { children: ReactNode; session: Session | null }) {
   const [myProfile, setMyProfile] = useState<UserProfile>(MY_PROFILE);
-  const [profiles] = useState<UserProfile[]>(SAMPLE_PROFILES);
-  const [castingCalls] = useState<CastingCall[]>(SAMPLE_CASTING_CALLS);
+  const [profiles, setProfiles] = useState<UserProfile[]>(SAMPLE_PROFILES);
+  const [castingCalls, setCastingCalls] = useState<CastingCall[]>(SAMPLE_CASTING_CALLS);
   const [conversations, setConversations] = useState<Conversation[]>(SAMPLE_CONVERSATIONS);
   const [messages, setMessages] = useState<Record<string, Message[]>>(SAMPLE_MESSAGES);
   const [applications, setApplications] = useState<Application[]>(SAMPLE_APPLICATIONS);
   const [crewBasket, setCrewBasket] = useState<CrewBasketItem[]>([]);
   const [crewProjectName, setCrewProjectNameState] = useState('My Production');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (session?.user) {
+      loadFromSupabase(session.user.id);
+    } else {
+      loadData();
+    }
+  }, [session]);
+
+  const loadFromSupabase = async (userId: string) => {
+    log.debug('loadFromSupabase start', { userId });
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const [profile, allProfiles, calls, convs, apps] = await Promise.all([
+        getProfile(userId),
+        getProfiles(),
+        getCastingCalls(),
+        getConversations(userId),
+        getMyApplications(userId),
+      ]);
+      if (profile) {
+        setMyProfile(profile);
+      } else {
+        log.warn('loadFromSupabase: profile not found', { userId });
+      }
+      if (allProfiles.length) setProfiles(allProfiles.filter(p => p.id !== userId));
+      if (calls.length) setCastingCalls(calls);
+      if (convs.length) setConversations(convs);
+      if (apps.length) setApplications(apps);
+      log.info('loadFromSupabase complete', { profiles: allProfiles.length, calls: calls.length, convs: convs.length, apps: apps.length });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error('loadFromSupabase failed', { message: msg });
+      setLoadError('Failed to load your data. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadData = async () => {
+    log.debug('loadData (local storage)');
+    setIsLoading(true);
+    setLoadError(null);
     try {
       const [profileData, appData, convData, msgData, crewData, crewProjData] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
@@ -51,8 +100,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (msgData) setMessages(JSON.parse(msgData));
       if (crewData) setCrewBasket(JSON.parse(crewData));
       if (crewProjData) setCrewProjectNameState(crewProjData);
-    } catch (e) {
-      console.log('Error loading data:', e);
+      log.info('loadData (local storage) complete');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error('loadData (local storage) failed', { message: msg });
+      setLoadError('Failed to load saved data.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -172,6 +226,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return crewBasket.some(item => item.profileId === profileId);
   }, [crewBasket]);
 
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
   const value = useMemo<AppState>(() => ({
     myProfile,
     profiles,
@@ -181,6 +239,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     applications,
     crewBasket,
     crewProjectName,
+    isLoading,
+    loadError,
     updateProfile,
     addApplication,
     sendMessage,
@@ -190,7 +250,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     clearCrewBasket,
     setCrewProjectName,
     isInCrewBasket,
-  }), [myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, updateProfile, addApplication, sendMessage, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket]);
+    signOut,
+  }), [myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, loadError, updateProfile, addApplication, sendMessage, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>
