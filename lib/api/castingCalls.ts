@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { supabase, isNetworkError, NetworkError } from '../supabase';
 import { createLogger } from '../logger';
 import { CastingCall } from '../types';
 
@@ -37,6 +37,7 @@ export async function getCastingCalls(): Promise<CastingCall[]> {
       .order('created_at', { ascending: false });
 
     if (error) {
+      if (isNetworkError({ message: error.message })) throw new NetworkError(error.message);
       log.error('getCastingCalls failed', { code: error.code, message: error.message });
       return [];
     }
@@ -44,6 +45,8 @@ export async function getCastingCalls(): Promise<CastingCall[]> {
     log.info('getCastingCalls success', { count: data?.length ?? 0 });
     return (data ?? []).map(toCastingCall);
   } catch (err: unknown) {
+    if (err instanceof NetworkError) throw err;
+    if (isNetworkError(err)) throw new NetworkError(err instanceof Error ? err.message : undefined);
     log.error('getCastingCalls threw', { message: err instanceof Error ? err.message : String(err) });
     return [];
   }
@@ -70,6 +73,10 @@ export async function getCastingCall(id: string): Promise<CastingCall | null> {
     log.info('getCastingCall success', { id });
     return toCastingCall(data);
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('getCastingCall: network unavailable', { id });
+      return null;
+    }
     log.error('getCastingCall threw', { id, message: err instanceof Error ? err.message : String(err) });
     return null;
   }
@@ -107,6 +114,10 @@ export async function createCastingCall(
     log.info('createCastingCall success', { id: data?.id });
     return data ? toCastingCall(data) : null;
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('createCastingCall: network unavailable');
+      return null;
+    }
     log.error('createCastingCall threw', { message: err instanceof Error ? err.message : String(err) });
     return null;
   }

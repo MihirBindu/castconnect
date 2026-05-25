@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { supabase, isNetworkError, NetworkError } from '../supabase';
 import { createLogger } from '../logger';
 import { UserProfile } from '../types';
 
@@ -41,6 +41,7 @@ export async function getProfile(id: string): Promise<UserProfile | null> {
       .single();
 
     if (error) {
+      if (isNetworkError({ message: error.message })) throw new NetworkError(error.message);
       log.error('getProfile failed', { id, code: error.code, message: error.message });
       return null;
     }
@@ -53,6 +54,8 @@ export async function getProfile(id: string): Promise<UserProfile | null> {
     log.info('getProfile success', { id, connections: connections.length });
     return { ...toProfile(data), connections };
   } catch (err: unknown) {
+    if (err instanceof NetworkError) throw err;
+    if (isNetworkError(err)) throw new NetworkError(err instanceof Error ? err.message : undefined);
     log.error('getProfile threw', { id, message: err instanceof Error ? err.message : String(err) });
     return null;
   }
@@ -67,6 +70,7 @@ export async function getProfiles(): Promise<UserProfile[]> {
       .order('rating', { ascending: false });
 
     if (error) {
+      if (isNetworkError({ message: error.message })) throw new NetworkError(error.message);
       log.error('getProfiles failed', { code: error.code, message: error.message });
       return [];
     }
@@ -74,6 +78,8 @@ export async function getProfiles(): Promise<UserProfile[]> {
     log.info('getProfiles success', { count: data?.length ?? 0 });
     return (data ?? []).map(toProfile);
   } catch (err: unknown) {
+    if (err instanceof NetworkError) throw err;
+    if (isNetworkError(err)) throw new NetworkError(err instanceof Error ? err.message : undefined);
     log.error('getProfiles threw', { message: err instanceof Error ? err.message : String(err) });
     return [];
   }
@@ -108,6 +114,10 @@ export async function updateProfile(id: string, updates: Partial<UserProfile>): 
     log.info('updateProfile success', { id });
     return true;
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('updateProfile: network unavailable', { id });
+      return false;
+    }
     log.error('updateProfile threw', { id, message: err instanceof Error ? err.message : String(err) });
     return false;
   }
@@ -126,6 +136,10 @@ async function getConnectionIds(userId: string): Promise<string[]> {
     }
     return (data ?? []).map((r) => r.following_id);
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('getConnectionIds: network unavailable', { userId });
+      return [];
+    }
     log.error('getConnectionIds threw', { userId, message: err instanceof Error ? err.message : String(err) });
     return [];
   }
@@ -163,6 +177,10 @@ export async function toggleConnection(myId: string, targetId: string): Promise<
     }
     return true;
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('toggleConnection: network unavailable', { myId, targetId });
+      return false;
+    }
     log.error('toggleConnection threw', { message: err instanceof Error ? err.message : String(err) });
     return false;
   }
