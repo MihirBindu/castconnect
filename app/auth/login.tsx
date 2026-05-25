@@ -117,18 +117,23 @@ export default function LoginScreen() {
       // PATH A — deep link safety net
       // Primary path is Path B (RedirectUriReceiverActivity intercepts myapp://).
       // This listener fires if somehow the URL arrives via Linking instead
-      // (e.g. Expo Go SDK older than 50 or a non-Chrome browser).
+      // (e.g. Expo Go routes myapp:// to onNewIntent before RedirectUriReceiverActivity).
       linkSub = Linking.addEventListener('url', ({ url }) => {
-        log.debug('Deep link received during OAuth', { url: url.substring(0, 100) });
+        log.debug('PATH A: deep link received', { url: url.substring(0, 100) });
         linkSub?.remove();
         WebBrowser.dismissBrowser().catch(() => {});
         exchangeCode(url, 'deep-link');
       });
 
-      // PATH B — WebBrowser (iOS Safari / standalone Android / web)
+      log.debug('Opening browser for Google OAuth');
+
+      // PATH B — WebBrowser (primary on Android: RedirectUriReceiverActivity catches myapp://)
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
-      log.debug('WebBrowser result', {
+
+      // ── This log is critical — if it never appears the browser is still open ──
+      log.debug('PATH B: WebBrowser resolved', {
         type: result.type,
+        sessionAlreadyResolved: sessionResolved,
         returnedUrl: result.type === 'success' ? result.url.substring(0, 100) : '(none)',
       });
 
@@ -137,11 +142,20 @@ export default function LoginScreen() {
       } else if (result.type === 'cancel' || result.type === 'dismiss') {
         if (!sessionResolved) {
           linkSub?.remove();
-          log.info('Google sign-in cancelled', { type: result.type });
+          log.info('Google sign-in cancelled by user', { type: result.type });
           setGoogleLoading(false);
         }
       } else {
-        log.warn('WebBrowser returned unexpected type', { type: result.type });
+        // e.g. 'locked' on Android — browser already open, or unknown type
+        // MUST clear loading here or the spinner hangs forever
+        log.warn('WebBrowser unexpected type — clearing loading', {
+          type: result.type,
+          sessionAlreadyResolved: sessionResolved,
+        });
+        if (!sessionResolved) {
+          linkSub?.remove();
+          setGoogleLoading(false);
+        }
       }
 
     } catch (err: unknown) {
