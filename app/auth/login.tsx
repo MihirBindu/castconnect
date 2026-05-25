@@ -14,7 +14,7 @@ import {
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
+import * as Linking from 'expo-linking';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { supabase } from '@/lib/supabase';
 import { createLogger } from '@/lib/logger';
@@ -54,7 +54,13 @@ export default function LoginScreen() {
     setGoogleLoading(true);
     log.info('Google sign-in initiated');
     try {
-      const redirectUrl = makeRedirectUri({ scheme: 'myapp' });
+      // Linking.createURL always resolves to the correct URL for the environment:
+      //   native build  → myapp://
+      //   Expo Go       → exp://xxx.xxx.xxx.xxx:8081/--/
+      //   web (Replit)  → https://<replit-domain>/
+      // makeRedirectUri({ scheme }) breaks on web — it returns localhost instead.
+      const redirectUrl = Linking.createURL('/');
+      log.debug('Google sign-in redirectUrl', { redirectUrl });
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -68,12 +74,15 @@ export default function LoginScreen() {
       if (!data.url) throw new Error('No OAuth URL received from Supabase');
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+      log.debug('WebBrowser result', { type: result.type });
 
       if (result.type === 'success') {
         const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
         if (sessionError) throw sessionError;
         log.info('Google sign-in successful');
-        router.replace('/(tabs)');
+        // Navigation is handled automatically by the auth listener in _layout.tsx
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        log.info('Google sign-in cancelled by user');
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Google sign-in failed';
