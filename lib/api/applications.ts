@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { supabase, isNetworkError, NetworkError } from '../supabase';
 import { createLogger } from '../logger';
 import { Application } from '../types';
 
@@ -14,6 +14,7 @@ export async function getMyApplications(userId: string): Promise<Application[]> 
       .order('applied_at', { ascending: false });
 
     if (error) {
+      if (isNetworkError({ message: error.message })) throw new NetworkError(error.message);
       log.error('getMyApplications failed', { code: error.code, message: error.message });
       return [];
     }
@@ -30,6 +31,8 @@ export async function getMyApplications(userId: string): Promise<Application[]> 
       note: row.note,
     }));
   } catch (err: unknown) {
+    if (err instanceof NetworkError) throw err;
+    if (isNetworkError(err)) throw new NetworkError(err instanceof Error ? err.message : undefined);
     log.error('getMyApplications threw', { message: err instanceof Error ? err.message : String(err) });
     return [];
   }
@@ -56,6 +59,10 @@ export async function applyToCastingCall(castingCallId: string, applicantId: str
     log.info('applyToCastingCall success', { castingCallId, applicantId });
     return true;
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('applyToCastingCall: network unavailable', { castingCallId, applicantId });
+      return false;
+    }
     log.error('applyToCastingCall threw', { message: err instanceof Error ? err.message : String(err) });
     return false;
   }
@@ -76,6 +83,10 @@ export async function hasApplied(castingCallId: string, applicantId: string): Pr
     }
     return !!data;
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('hasApplied: network unavailable', { castingCallId, applicantId });
+      return false;
+    }
     log.error('hasApplied threw', { message: err instanceof Error ? err.message : String(err) });
     return false;
   }

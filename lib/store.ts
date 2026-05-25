@@ -11,7 +11,9 @@ export interface AppState {
   crewBasket: CrewBasketItem[];
   crewProjectName: string;
   isLoading: boolean;
+  isOffline: boolean;
   loadError: string | null;
+  retryLoad: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   addApplication: (castingCallId: string, castingCallTitle: string) => void;
   sendMessage: (conversationId: string, content: string) => void;

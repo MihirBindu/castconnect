@@ -26,3 +26,39 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
+
+// ── Network error utilities ──────────────────────────────────────────────────
+
+export class NetworkError extends Error {
+  constructor(cause?: string) {
+    super(cause ?? 'Network request failed');
+    this.name = 'NetworkError';
+  }
+}
+
+const NETWORK_PHRASES = [
+  'network request failed',
+  'failed to fetch',
+  'fetch failed',
+  'networkerror',
+  'econnrefused',
+  'enotfound',
+  'err_internet_disconnected',
+  'err_name_not_resolved',
+  'request timed out',
+  'the internet connection appears to be offline',
+  'could not connect to the server',
+  'socket hang up',
+  'load failed',          // iOS WKWebView offline
+  'software caused connection abort',
+];
+
+export function isNetworkError(err: unknown): boolean {
+  if (err instanceof NetworkError) return true;
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return NETWORK_PHRASES.some(p => msg.includes(p));
+}
+
+export function networkErrorMessage(): string {
+  return 'No connection. Check your internet and try again.';
+}

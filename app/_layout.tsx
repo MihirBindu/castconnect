@@ -18,12 +18,28 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { AppProvider } from "@/lib/AppProvider";
 import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
-import { supabase } from "@/lib/supabase";
+import { supabase, isNetworkError } from "@/lib/supabase";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger('RootLayout');
 
 SplashScreen.preventAutoHideAsync();
+
+// ── Suppress unhandled network rejections from Supabase's background
+//    token-refresh timer so they don't appear as red error boxes in dev.
+if (typeof globalThis !== 'undefined') {
+  const _origHandler = (globalThis as Record<string, unknown>).onunhandledrejection;
+  (globalThis as Record<string, unknown>).onunhandledrejection = (event: PromiseRejectionEvent) => {
+    if (isNetworkError(event?.reason)) {
+      log.warn('Suppressed unhandled network rejection', {
+        message: event?.reason instanceof Error ? event.reason.message : String(event?.reason),
+      });
+      event?.preventDefault?.();
+      return;
+    }
+    if (typeof _origHandler === 'function') (_origHandler as (e: PromiseRejectionEvent) => void)(event);
+  };
+}
 
 function RootLayoutNav() {
   const { mode } = useTheme();
@@ -61,10 +77,17 @@ export default function RootLayout() {
 
   useEffect(() => {
     log.info('Fetching initial session');
+
     supabase.auth.getSession()
       .then(({ data, error }) => {
         if (error) {
-          log.error('Failed to get session', { message: error.message });
+          if (isNetworkError({ message: error.message })) {
+            // Network down during token refresh — treat as "no session" so the
+            // login screen shows, but log as warn not error.
+            log.warn('getSession: network error during token refresh', { message: error.message });
+          } else {
+            log.error('Failed to get session', { message: error.message });
+          }
           setSession(null);
           return;
         }
@@ -72,16 +95,29 @@ export default function RootLayout() {
         setSession(data.session);
       })
       .catch((err: unknown) => {
-        log.error('getSession threw', { message: err instanceof Error ? err.message : String(err) });
+        const message = err instanceof Error ? err.message : String(err);
+        if (isNetworkError(err)) {
+          log.warn('getSession threw: network error', { message });
+        } else {
+          log.error('getSession threw', { message });
+        }
         setSession(null);
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       log.info('Auth state changed', { event, userId: s?.user.id });
       setSession(s);
-      if (event === 'SIGNED_OUT' || (!s && event !== 'INITIAL_SESSION')) {
+
+      if (event === 'SIGNED_OUT') {
         router.replace('/auth/login');
       }
+
+      // Don't redirect when the session simply becomes null due to a network
+      // hiccup — only act on an explicit SIGNED_OUT event.
+      if (!s && event !== 'INITIAL_SESSION' && event !== 'SIGNED_OUT' && event !== 'TOKEN_REFRESHED') {
+        router.replace('/auth/login');
+      }
+
       if (event === 'TOKEN_REFRESHED') {
         log.info('Token refreshed successfully');
       }

@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { supabase, isNetworkError, NetworkError } from '../supabase';
 import { createLogger } from '../logger';
 import { Message, Conversation } from '../types';
 
@@ -31,6 +31,10 @@ export async function getMessages(myId: string, otherId: string): Promise<Messag
       read: row.read,
     }));
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('getMessages: network unavailable', { myId, otherId });
+      return [];
+    }
     log.error('getMessages threw', { message: err instanceof Error ? err.message : String(err) });
     return [];
   }
@@ -64,6 +68,10 @@ export async function sendMessage(senderId: string, receiverId: string, content:
       read: data.read,
     };
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('sendMessage: network unavailable');
+      return null;
+    }
     log.error('sendMessage threw', { message: err instanceof Error ? err.message : String(err) });
     return null;
   }
@@ -83,6 +91,10 @@ export async function markMessagesRead(myId: string, senderId: string): Promise<
       log.error('markMessagesRead failed', { code: error.code, message: error.message });
     }
   } catch (err: unknown) {
+    if (isNetworkError(err)) {
+      log.warn('markMessagesRead: network unavailable', { myId, senderId });
+      return;
+    }
     log.error('markMessagesRead threw', { message: err instanceof Error ? err.message : String(err) });
   }
 }
@@ -97,6 +109,7 @@ export async function getConversations(myId: string): Promise<Conversation[]> {
       .order('created_at', { ascending: false });
 
     if (error) {
+      if (isNetworkError({ message: error.message })) throw new NetworkError(error.message);
       log.error('getConversations failed', { code: error.code, message: error.message });
       return [];
     }
@@ -122,6 +135,8 @@ export async function getConversations(myId: string): Promise<Conversation[]> {
     log.info('getConversations success', { count: seen.size });
     return Array.from(seen.values());
   } catch (err: unknown) {
+    if (err instanceof NetworkError) throw err;
+    if (isNetworkError(err)) throw new NetworkError(err instanceof Error ? err.message : undefined);
     log.error('getConversations threw', { message: err instanceof Error ? err.message : String(err) });
     return [];
   }
