@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useCallback, ReactNode, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, ReactNode, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { Session } from '@supabase/supabase-js';
 import { AppContext, AppState } from './store';
-import { supabase } from './supabase';
+import { supabase, isNetworkError, NetworkError } from './supabase';
 import { createLogger } from './logger';
 
 const log = createLogger('AppProvider');
@@ -40,7 +40,11 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   const [crewBasket, setCrewBasket] = useState<CrewBasketItem[]>([]);
   const [crewProjectName, setCrewProjectNameState] = useState('My Production');
   const [isLoading, setIsLoading] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const sessionRef = useRef<Session | null>(session);
+  useEffect(() => { sessionRef.current = session; }, [session]);
 
   useEffect(() => {
     if (session?.user) {
@@ -54,6 +58,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     log.debug('loadFromSupabase start', { userId });
     setIsLoading(true);
     setLoadError(null);
+    setIsOffline(false);
     try {
       const [profile, allProfiles, calls, convs, apps] = await Promise.all([
         getProfile(userId),
@@ -73,18 +78,23 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
       if (apps.length) setApplications(apps);
       log.info('loadFromSupabase complete', { profiles: allProfiles.length, calls: calls.length, convs: convs.length, apps: apps.length });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      log.error('loadFromSupabase failed', { message: msg });
-      setLoadError('Failed to load your data. Please check your connection and try again.');
+      if (err instanceof NetworkError || isNetworkError(err)) {
+        log.warn('loadFromSupabase: network unavailable — falling back to cached data', { userId });
+        setIsOffline(true);
+        await loadData({ silent: true });
+      } else {
+        const msg = err instanceof Error ? err.message : String(err);
+        log.error('loadFromSupabase failed', { message: msg });
+        setLoadError('Failed to load your data. Please check your connection and try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (opts?: { silent?: boolean }) => {
     log.debug('loadData (local storage)');
-    setIsLoading(true);
-    setLoadError(null);
+    if (!opts?.silent) { setIsLoading(true); setLoadError(null); }
     try {
       const [profileData, appData, convData, msgData, crewData, crewProjData] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
@@ -104,26 +114,35 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       log.error('loadData (local storage) failed', { message: msg });
-      setLoadError('Failed to load saved data.');
+      if (!opts?.silent) setLoadError('Failed to load saved data.');
     } finally {
-      setIsLoading(false);
+      if (!opts?.silent) setIsLoading(false);
     }
   };
 
+  const retryLoad = useCallback(() => {
+    const s = sessionRef.current;
+    if (s?.user) {
+      loadFromSupabase(s.user.id);
+    } else {
+      loadData();
+    }
+  }, []);
+
   const saveProfile = async (profile: UserProfile) => {
-    try { await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile)); } catch (e) { console.log('Error saving:', e); }
+    try { await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile)); } catch { /* no-op */ }
   };
   const saveApplications = async (apps: Application[]) => {
-    try { await AsyncStorage.setItem(STORAGE_KEYS.APPLICATIONS, JSON.stringify(apps)); } catch (e) { console.log('Error saving:', e); }
+    try { await AsyncStorage.setItem(STORAGE_KEYS.APPLICATIONS, JSON.stringify(apps)); } catch { /* no-op */ }
   };
   const saveConversations = async (convs: Conversation[]) => {
-    try { await AsyncStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(convs)); } catch (e) { console.log('Error saving:', e); }
+    try { await AsyncStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(convs)); } catch { /* no-op */ }
   };
   const saveMessages = async (msgs: Record<string, Message[]>) => {
-    try { await AsyncStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(msgs)); } catch (e) { console.log('Error saving:', e); }
+    try { await AsyncStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(msgs)); } catch { /* no-op */ }
   };
   const saveCrewBasket = async (items: CrewBasketItem[]) => {
-    try { await AsyncStorage.setItem(STORAGE_KEYS.CREW_BASKET, JSON.stringify(items)); } catch (e) { console.log('Error saving:', e); }
+    try { await AsyncStorage.setItem(STORAGE_KEYS.CREW_BASKET, JSON.stringify(items)); } catch { /* no-op */ }
   };
 
   const updateProfile = useCallback((updates: Partial<UserProfile>) => {
@@ -240,7 +259,9 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     crewBasket,
     crewProjectName,
     isLoading,
+    isOffline,
     loadError,
+    retryLoad,
     updateProfile,
     addApplication,
     sendMessage,
@@ -251,7 +272,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setCrewProjectName,
     isInCrewBasket,
     signOut,
-  }), [myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, loadError, updateProfile, addApplication, sendMessage, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
+  }), [myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, isOffline, loadError, retryLoad, updateProfile, addApplication, sendMessage, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>

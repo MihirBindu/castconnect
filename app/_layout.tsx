@@ -18,7 +18,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { AppProvider } from "@/lib/AppProvider";
 import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
-import { supabase } from "@/lib/supabase";
+import { supabase, isNetworkError } from "@/lib/supabase";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger('RootLayout');
@@ -64,7 +64,11 @@ export default function RootLayout() {
     supabase.auth.getSession()
       .then(({ data, error }) => {
         if (error) {
-          log.error('Failed to get session', { message: error.message });
+          if (isNetworkError({ message: error.message })) {
+            log.warn('getSession: network error during token refresh', { message: error.message });
+          } else {
+            log.error('Failed to get session', { message: error.message });
+          }
           setSession(null);
           return;
         }
@@ -72,14 +76,23 @@ export default function RootLayout() {
         setSession(data.session);
       })
       .catch((err: unknown) => {
-        log.error('getSession threw', { message: err instanceof Error ? err.message : String(err) });
+        const message = err instanceof Error ? err.message : String(err);
+        if (isNetworkError(err)) {
+          log.warn('getSession threw: network error', { message });
+        } else {
+          log.error('getSession threw', { message });
+        }
         setSession(null);
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       log.info('Auth state changed', { event, userId: s?.user.id });
       setSession(s);
-      if (event === 'SIGNED_OUT' || (!s && event !== 'INITIAL_SESSION')) {
+      // Only redirect on an explicit sign-out, not on any transient null session
+      if (event === 'SIGNED_OUT') {
+        router.replace('/auth/login');
+      }
+      if (!s && event !== 'INITIAL_SESSION' && event !== 'SIGNED_OUT' && event !== 'TOKEN_REFRESHED') {
         router.replace('/auth/login');
       }
       if (event === 'TOKEN_REFRESHED') {
