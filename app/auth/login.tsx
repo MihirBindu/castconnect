@@ -73,16 +73,44 @@ export default function LoginScreen() {
       if (error) throw error;
       if (!data.url) throw new Error('No OAuth URL received from Supabase');
 
+      // ── Diagnostic: confirm our redirectUrl is embedded in the OAuth URL ──
+      // If hasOurRedirect=false, Supabase rejected it (not in allowed list) and
+      // used its Site URL instead. If oauthUrlHasLocalhost=true, that's the bug.
+      const oauthUrlHasLocalhost = data.url.includes('localhost');
+      const hasOurRedirect = data.url.includes(encodeURIComponent(redirectUrl));
+      log.debug('OAuth URL check', {
+        oauthUrlHasLocalhost,
+        hasOurRedirect,
+        // Trim to avoid flooding the console — shows host + first 120 chars of path/query
+        oauthUrlPreview: data.url.substring(0, 120),
+      });
+      // ──────────────────────────────────────────────────────────────────────
+
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
-      log.debug('WebBrowser result', { type: result.type });
+
+      // ── Diagnostic: full result so we can see type + returned URL ──
+      log.debug('WebBrowser result', {
+        type: result.type,
+        // result.url only exists when type === 'success'
+        returnedUrl: result.type === 'success' ? result.url.substring(0, 120) : '(none)',
+        returnedUrlHasLocalhost: result.type === 'success' && result.url.includes('localhost'),
+      });
+      // ───────────────────────────────────────────────────────────────
 
       if (result.type === 'success') {
-        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
-        if (sessionError) throw sessionError;
-        log.info('Google sign-in successful');
+        log.debug('Exchanging code for session', { url: result.url.substring(0, 120) });
+        const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
+        if (sessionError) {
+          log.error('exchangeCodeForSession failed', { code: sessionError.code, message: sessionError.message });
+          throw sessionError;
+        }
+        log.info('Google sign-in successful', { userId: sessionData.user?.id });
         // Navigation is handled automatically by the auth listener in _layout.tsx
       } else if (result.type === 'cancel' || result.type === 'dismiss') {
-        log.info('Google sign-in cancelled by user');
+        log.info('Google sign-in cancelled by user', { type: result.type });
+      } else {
+        // Catch any unexpected result type (e.g. 'locked' on Android)
+        log.warn('WebBrowser returned unexpected type', { type: result.type });
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Google sign-in failed';
