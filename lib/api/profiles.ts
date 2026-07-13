@@ -61,11 +61,14 @@ function toProfile(row: Record<string, unknown>): UserProfile {
 export async function getProfile(id: string): Promise<UserProfile | null> {
   log.debug('getProfile', { id });
   try {
+    // maybeSingle: a missing profile row (not yet created / created lazily on
+    // onboarding) returns null instead of PGRST116 "Cannot coerce..." — the id
+    // is a primary key so there's never more than one row.
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       if (isNetworkError({ message: error.message })) throw new NetworkError(error.message);
