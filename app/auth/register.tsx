@@ -73,10 +73,11 @@ export default function RegisterScreen() {
         return;
       }
 
-      // Supabase returns a session immediately if email confirmation is disabled
+      // Supabase returns a session immediately if email confirmation is disabled.
+      // The root layout's profile-completion gate then routes the new user to
+      // onboarding once the session updates.
       if (data.session) {
         log.info('Registration successful (auto-confirmed)', { userId: data.user?.id });
-        router.replace('/(tabs)');
       } else {
         log.info('Registration successful (confirmation required)', { userId: data.user?.id });
         Alert.alert(

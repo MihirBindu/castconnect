@@ -1,7 +1,9 @@
 import { createContext, useContext } from 'react';
+import { Session } from '@supabase/supabase-js';
 import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole } from './types';
 
 export interface AppState {
+  session: Session | null;
   myProfile: UserProfile;
   profiles: UserProfile[];
   castingCalls: CastingCall[];
