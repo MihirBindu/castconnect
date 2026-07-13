@@ -46,7 +46,7 @@ export default function CompleteProfileScreen() {
   const styles = useMemo(() => makeStyles(C), [C]);
 
   const { session, updateProfile } = useAppState();
-  const { markComplete } = useProfileGate();
+  const { setStatus } = useProfileGate();
 
   const userId = session?.user?.id ?? '';
   const email = session?.user?.email ?? '';
@@ -192,9 +192,11 @@ export default function CompleteProfileScreen() {
           authProvider: p.authProvider,
           profileCompleted: p.profileCompleted,
           updatedAt: p.updatedAt,
+          onboardingStatus: p.onboardingStatus,
         });
-        markComplete(); // let the root gate through to the dashboard
-        router.replace('/(tabs)');
+        // Personal step done → advance to the professional step (step 2).
+        setStatus(p.onboardingStatus ?? 'PROFESSIONAL_PROFILE_PENDING');
+        router.replace('/onboarding/professional-profile' as never);
         return;
       }
 
@@ -226,6 +228,7 @@ export default function CompleteProfileScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={[styles.topBar, { paddingTop: topPadding }]}>
+        <Text style={styles.stepText}>Step 1 of 3</Text>
         <View style={styles.topBarSpacer} />
         <Pressable
           onPress={handleSignOut}
@@ -524,6 +527,11 @@ function makeStyles(C: ThemeColors) {
       paddingBottom: 8,
     },
     topBarSpacer: { flex: 1 },
+    stepText: {
+      color: C.textSecondary,
+      fontFamily: 'DMSans_600SemiBold',
+      fontSize: 13,
+    },
     signOutBtn: {
       paddingVertical: 6,
       paddingHorizontal: 12,

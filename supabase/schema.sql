@@ -44,6 +44,18 @@ create table if not exists public.profiles (
   profile_completed boolean     not null default false,
   updated_at        timestamptz not null default now(),
 
+  -- ── Professional Profile onboarding fields ──
+  roles                          text[]  not null default '{}',
+  custom_roles                   text[]  not null default '{}',
+  primary_role                   text,
+  experience_level               text,
+  year_started                   int,
+  languages                      jsonb   not null default '[]'::jsonb,
+  work_preferences               text[]  not null default '{}',
+  availability_status            text,
+  professional_profile_completed boolean not null default false,
+  onboarding_status              text    not null default 'PERSONAL_PROFILE_PENDING',
+
   constraint profiles_age_chk        check (age is null or (age between 18 and 100)),
   constraint profiles_height_chk     check (height_cm is null or (height_cm between 90 and 250)),
   constraint profiles_body_type_chk  check (
@@ -56,6 +68,14 @@ create table if not exists public.profiles (
     complexion is null or complexion in (
       'Very Fair','Fair','Light','Wheatish','Medium','Olive',
       'Dusky','Brown','Dark','Deep','Prefer Not to Say','Other'
+    )
+  ),
+  constraint profiles_year_started_chk check (
+    year_started is null or (year_started between 1900 and 2100)
+  ),
+  constraint profiles_onboarding_status_chk check (
+    onboarding_status in (
+      'PERSONAL_PROFILE_PENDING','PROFESSIONAL_PROFILE_PENDING','PORTFOLIO_PENDING','COMPLETED'
     )
   )
 );
@@ -126,6 +146,48 @@ drop trigger if exists trg_set_profile_completion on public.profiles;
 create trigger trg_set_profile_completion
   before insert or update on public.profiles
   for each row execute function public.set_profile_completion();
+
+-- professional_profile_completed + onboarding_status are recomputed
+-- server-side on every write. Named "trg_zz_" so it fires AFTER
+-- trg_set_profile_completion (BEFORE triggers run in name order), so
+-- new.profile_completed is already set when we derive onboarding_status.
+-- Kept separate from set_profile_completion so the two steps don't entangle.
+create or replace function public.set_onboarding_status()
+returns trigger language plpgsql as $$
+declare
+  v_bio         text := btrim(coalesce(new.bio, ''));
+  v_role_count  int  := coalesce(array_length(new.roles, 1), 0);
+  v_custom_ok   boolean := coalesce(array_length(new.custom_roles, 1), 0) >= 1;
+  v_has_other   boolean := 'Other' = any(coalesce(new.roles, '{}'::text[]));
+begin
+  new.professional_profile_completed :=
+        v_role_count >= 1
+    and (not v_has_other or v_custom_ok)
+    and new.primary_role is not null
+    and new.primary_role = any(new.roles)
+    and coalesce(new.experience_level, '') in (
+      'Fresher','Less than 1 year','1–2 years','2–5 years',
+      '5–10 years','More than 10 years','Prefer Not to Say'
+    )
+    and char_length(v_bio) between 50 and 1000
+    and v_bio ~ '[[:alpha:]]';
+
+  new.onboarding_status :=
+    case
+      when not coalesce(new.profile_completed, false) then 'PERSONAL_PROFILE_PENDING'
+      when not new.professional_profile_completed     then 'PROFESSIONAL_PROFILE_PENDING'
+      else 'COMPLETED'
+    end;
+
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_zz_onboarding_status on public.profiles;
+create trigger trg_zz_onboarding_status
+  before insert or update on public.profiles
+  for each row execute function public.set_onboarding_status();
 
 -- ────────────────────────────────────────────────────────────
 -- CONNECTIONS (many-to-many)

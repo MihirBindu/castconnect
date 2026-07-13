@@ -1,17 +1,19 @@
 import { createContext, useContext } from 'react';
+import { OnboardingStatus } from './types';
 
-export type ProfileGateStatus = 'idle' | 'checking' | 'incomplete' | 'complete' | 'error';
+// The gate machine: still-resolving states plus the backend onboarding status.
+export type ProfileGateState = 'idle' | 'checking' | 'error' | OnboardingStatus;
 
 export interface ProfileGateValue {
-  /** Marks the signed-in user's profile complete after a successful save so the
-   *  root gate lets them into the dashboard without a second round-trip. */
-  markComplete: () => void;
-  /** Re-runs the profile-completion check (used by the retry screen). */
+  /** Advance/refresh the gate after a successful onboarding save, so the root
+   *  gate routes to the next step (or the dashboard) without a round-trip. */
+  setStatus: (status: OnboardingStatus) => void;
+  /** Re-run the onboarding-status check (used by the retry screen). */
   refresh: () => void;
 }
 
 export const ProfileGateContext = createContext<ProfileGateValue>({
-  markComplete: () => {},
+  setStatus: () => {},
   refresh: () => {},
 });
 
