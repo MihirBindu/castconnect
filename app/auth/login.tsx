@@ -236,8 +236,9 @@ export default function LoginScreen() {
       });
 
       if (error) throw error;
+      // Routing is handled centrally by the root layout's profile-completion
+      // gate once the session updates — sends first-time users to onboarding.
       log.info('Apple sign-in successful');
-      router.replace('/(tabs)');
     } catch (err: unknown) {
       if ((err as { code?: string }).code === 'ERR_REQUEST_CANCELED') return;
       const message = err instanceof Error ? err.message : 'Apple sign-in failed';
@@ -274,8 +275,10 @@ export default function LoginScreen() {
         return;
       }
 
+      // Routing is handled centrally by the root layout's profile-completion
+      // gate once the session updates — first-time users go to onboarding,
+      // returning users with a complete profile go straight to the dashboard.
       log.info('Email sign-in successful', { userId: data.session?.user.id });
-      router.replace('/(tabs)');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
       log.error('Email sign-in exception', { message });

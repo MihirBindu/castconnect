@@ -31,19 +31,48 @@ create table if not exists public.profiles (
   day_rate         int  not null default 0,
   rating           numeric(3,2) not null default 0,
   review_count     int  not null default 0,
-  created_at       timestamptz not null default now()
+  created_at       timestamptz not null default now(),
+
+  -- ── Onboarding / "Complete Your Profile" fields ──
+  age               int,
+  height_cm         int,
+  body_type         text,
+  custom_body_type  text        not null default '',
+  complexion        text,
+  custom_complexion text        not null default '',
+  auth_provider     text        not null default 'email',
+  profile_completed boolean     not null default false,
+  updated_at        timestamptz not null default now(),
+
+  constraint profiles_age_chk        check (age is null or (age between 18 and 100)),
+  constraint profiles_height_chk     check (height_cm is null or (height_cm between 90 and 250)),
+  constraint profiles_body_type_chk  check (
+    body_type is null or body_type in (
+      'Slim','Athletic','Average','Muscular','Curvy',
+      'Plus Size','Broad','Petite','Prefer Not to Say','Other'
+    )
+  ),
+  constraint profiles_complexion_chk check (
+    complexion is null or complexion in (
+      'Very Fair','Fair','Light','Wheatish','Medium','Olive',
+      'Dusky','Brown','Dark','Deep','Prefer Not to Say','Other'
+    )
+  )
 );
 
--- Auto-create a profile row when a new user signs up
+-- Auto-create a profile row when a new user signs up. Records the auth
+-- provider + Google display name and never duplicates a row.
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer as $$
 begin
-  insert into public.profiles (id, name, contact_email)
+  insert into public.profiles (id, name, contact_email, auth_provider)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data->>'name', ''),
-    new.email
-  );
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', ''),
+    new.email,
+    coalesce(new.raw_app_meta_data->>'provider', 'email')
+  )
+  on conflict (id) do nothing;
   return new;
 end;
 $$;
@@ -52,6 +81,41 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- profile_completed is recomputed server-side on every write, so a client can
+-- never mark itself complete with invalid or missing data. Also trims name
+-- and bumps updated_at.
+create or replace function public.set_profile_completion()
+returns trigger language plpgsql as $$
+declare
+  v_name text := btrim(coalesce(new.name, ''));
+begin
+  new.name := v_name;
+  new.updated_at := now();
+
+  new.profile_completed :=
+        char_length(v_name) between 2 and 100
+    and v_name ~ '[[:alpha:]]'
+    and v_name ~ '^[[:alpha:][:space:]''-]+$'
+    and new.age is not null       and new.age between 18 and 100
+    and new.height_cm is not null and new.height_cm between 90 and 250
+    and coalesce(new.body_type, '') in (
+      'Slim','Athletic','Average','Muscular','Curvy',
+      'Plus Size','Broad','Petite','Prefer Not to Say','Other'
+    )
+    and coalesce(new.complexion, '') in (
+      'Very Fair','Fair','Light','Wheatish','Medium','Olive',
+      'Dusky','Brown','Dark','Deep','Prefer Not to Say','Other'
+    );
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_set_profile_completion on public.profiles;
+create trigger trg_set_profile_completion
+  before insert or update on public.profiles
+  for each row execute function public.set_profile_completion();
 
 -- ────────────────────────────────────────────────────────────
 -- CONNECTIONS (many-to-many)

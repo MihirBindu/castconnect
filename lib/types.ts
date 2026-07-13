@@ -6,6 +6,38 @@ export type ApplicationStatus = 'applied' | 'shortlisted' | 'selected' | 'reject
 
 export type AvailabilityStatus = 'available' | 'busy' | 'not_available';
 
+export const BODY_TYPE_OPTIONS = [
+  'Slim',
+  'Athletic',
+  'Average',
+  'Muscular',
+  'Curvy',
+  'Plus Size',
+  'Broad',
+  'Petite',
+  'Prefer Not to Say',
+  'Other',
+] as const;
+export type BodyType = (typeof BODY_TYPE_OPTIONS)[number];
+
+export const COMPLEXION_OPTIONS = [
+  'Very Fair',
+  'Fair',
+  'Light',
+  'Wheatish',
+  'Medium',
+  'Olive',
+  'Dusky',
+  'Brown',
+  'Dark',
+  'Deep',
+  'Prefer Not to Say',
+  'Other',
+] as const;
+export type Complexion = (typeof COMPLEXION_OPTIONS)[number];
+
+export type HeightUnit = 'ft' | 'cm';
+
 export type CrewRole =
   | 'Director'
   | 'Actor'
@@ -46,6 +78,18 @@ export interface UserProfile {
   rating: number;
   reviewCount: number;
   createdAt: string;
+
+  // ── Onboarding / "Complete Your Profile" fields (optional so existing
+  //    mock/sample data stays valid; populated from the backend) ──
+  age?: number | null;
+  heightCm?: number | null;
+  bodyType?: BodyType | null;
+  customBodyType?: string;
+  complexion?: Complexion | null;
+  customComplexion?: string;
+  authProvider?: string;
+  profileCompleted?: boolean;
+  updatedAt?: string;
 }
 
 export interface CastingCall {
