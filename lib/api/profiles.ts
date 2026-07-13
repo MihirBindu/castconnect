@@ -1,6 +1,14 @@
 import { supabase, isNetworkError, NetworkError, networkErrorMessage } from '../supabase';
 import { createLogger } from '../logger';
-import { UserProfile, BodyType, Complexion } from '../types';
+import {
+  UserProfile,
+  BodyType,
+  Complexion,
+  ExperienceLevel,
+  LanguageEntry,
+  ProfessionalAvailabilityStatus,
+  OnboardingStatus,
+} from '../types';
 
 const log = createLogger('api/profiles');
 
@@ -55,6 +63,16 @@ function toProfile(row: Record<string, unknown>): UserProfile {
     authProvider: (row.auth_provider as string) ?? 'email',
     profileCompleted: (row.profile_completed as boolean) ?? false,
     updatedAt: (row.updated_at as string) ?? (row.created_at as string),
+    roles: (row.roles as string[]) ?? [],
+    customRoles: (row.custom_roles as string[]) ?? [],
+    primaryRole: (row.primary_role as string | null) ?? null,
+    experienceLevel: (row.experience_level as ExperienceLevel | null) ?? null,
+    yearStarted: (row.year_started as number | null) ?? null,
+    languages: (row.languages as LanguageEntry[]) ?? [],
+    workPreferences: (row.work_preferences as string[]) ?? [],
+    availabilityStatus: (row.availability_status as ProfessionalAvailabilityStatus | null) ?? null,
+    professionalProfileCompleted: (row.professional_profile_completed as boolean) ?? false,
+    onboardingStatus: (row.onboarding_status as OnboardingStatus) ?? 'PERSONAL_PROFILE_PENDING',
   };
 }
 
@@ -155,22 +173,38 @@ export async function updateProfile(id: string, updates: Partial<UserProfile>): 
 
 // ── Onboarding / profile-completion ───────────────────────────────────────────
 
-export type ProfileStatusResult = { exists: boolean; completed: boolean } | 'network-error';
+export type ProfileStatusResult =
+  | { exists: boolean; onboardingStatus: OnboardingStatus }
+  | 'network-error';
 
 const STATUS_TIMEOUT_MS = 12000;
 
+const VALID_ONBOARDING_STATUSES: OnboardingStatus[] = [
+  'PERSONAL_PROFILE_PENDING',
+  'PROFESSIONAL_PROFILE_PENDING',
+  'PORTFOLIO_PENDING',
+  'COMPLETED',
+];
+
+/** Derives the onboarding step from the two completion flags as a fallback. */
+function deriveOnboardingStatus(personalComplete: boolean, professionalComplete: boolean): OnboardingStatus {
+  if (!personalComplete) return 'PERSONAL_PROFILE_PENDING';
+  if (!professionalComplete) return 'PROFESSIONAL_PROFILE_PENDING';
+  return 'COMPLETED';
+}
+
 /**
- * Slim query used by the root routing gate to decide whether a signed-in user
- * still needs to complete onboarding. Returns 'network-error' when the check
- * can't reach the server so the caller can show a retry screen instead of
- * guessing (and instead of flashing the dashboard).
+ * Slim query used by the root routing gate to decide which onboarding step a
+ * signed-in user is on. Returns 'network-error' when the check can't reach the
+ * server so the caller can show a retry screen instead of guessing (and instead
+ * of flashing the dashboard).
  */
 export async function getProfileStatus(userId: string): Promise<ProfileStatusResult> {
   log.debug('getProfileStatus', { userId });
   try {
     const query = supabase
       .from('profiles')
-      .select('id, profile_completed')
+      .select('id, profile_completed, professional_profile_completed, onboarding_status')
       .eq('id', userId)
       .maybeSingle();
 
@@ -181,14 +215,25 @@ export async function getProfileStatus(userId: string): Promise<ProfileStatusRes
       log.error('getProfileStatus failed', { userId, code: error.code, message: error.message });
       // A non-network error (missing row/column, RLS) shouldn't drop the user
       // into a half-broken dashboard — route them through onboarding instead.
-      return { exists: false, completed: false };
+      return { exists: false, onboardingStatus: 'PERSONAL_PROFILE_PENDING' };
     }
-    if (!data) return { exists: false, completed: false };
-    return { exists: true, completed: Boolean((data as { profile_completed?: boolean }).profile_completed) };
+    if (!data) return { exists: false, onboardingStatus: 'PERSONAL_PROFILE_PENDING' };
+
+    const row = data as {
+      profile_completed?: boolean;
+      professional_profile_completed?: boolean;
+      onboarding_status?: string;
+    };
+    const status =
+      row.onboarding_status && VALID_ONBOARDING_STATUSES.includes(row.onboarding_status as OnboardingStatus)
+        ? (row.onboarding_status as OnboardingStatus)
+        : deriveOnboardingStatus(Boolean(row.profile_completed), Boolean(row.professional_profile_completed));
+
+    return { exists: true, onboardingStatus: status };
   } catch (err: unknown) {
     if (err instanceof TimeoutError || isNetworkError(err)) return 'network-error';
     log.error('getProfileStatus threw', { userId, message: err instanceof Error ? err.message : String(err) });
-    return { exists: false, completed: false };
+    return { exists: false, onboardingStatus: 'PERSONAL_PROFILE_PENDING' };
   }
 }
 
@@ -283,6 +328,97 @@ export async function completeProfile(userId: string, input: OnboardingInput): P
       return { ok: false, error: 'network', message: networkErrorMessage() };
     }
     log.error('completeProfile threw', { userId, message: err instanceof Error ? err.message : String(err) });
+    return { ok: false, error: 'unknown', message: 'Something went wrong. Please try again.' };
+  }
+}
+
+// ── Professional profile (onboarding step 2) ──────────────────────────────────
+
+export interface ProfessionalInput {
+  roles: string[]; // resolved role values (no "Other" placeholder; custom text included)
+  customRoles: string[];
+  primaryRole: string;
+  experienceLevel: ExperienceLevel;
+  yearStarted: number | null;
+  bio: string; // already sanitized
+  skills: string[];
+  languages: LanguageEntry[];
+  workPreferences: string[];
+  availabilityStatus: ProfessionalAvailabilityStatus | null;
+}
+
+export type SaveProfessionalResult =
+  | { ok: true; profile: UserProfile }
+  | { ok: false; error: CompleteProfileError; message: string };
+
+/**
+ * Saves the professional profile. Upsert keyed on the auth user id (no duplicate
+ * row), re-reads the server-computed professional_profile_completed flag so the
+ * client can't self-report completion.
+ */
+export async function saveProfessionalProfile(
+  userId: string,
+  input: ProfessionalInput,
+): Promise<SaveProfessionalResult> {
+  log.debug('saveProfessionalProfile', { userId });
+
+  const payload = {
+    id: userId,
+    roles: input.roles,
+    custom_roles: input.customRoles,
+    primary_role: input.primaryRole,
+    experience_level: input.experienceLevel,
+    year_started: input.yearStarted,
+    bio: input.bio,
+    skills: input.skills,
+    languages: input.languages,
+    work_preferences: input.workPreferences,
+    availability_status: input.availabilityStatus,
+  };
+
+  try {
+    const query = supabase
+      .from('profiles')
+      .upsert(payload, { onConflict: 'id' })
+      .select('*')
+      .single();
+
+    const { data, error } = await withTimeout(query, SAVE_TIMEOUT_MS);
+
+    if (error) {
+      if (isNetworkError({ message: error.message })) {
+        return { ok: false, error: 'network', message: networkErrorMessage() };
+      }
+      const code = error.code ?? '';
+      log.error('saveProfessionalProfile failed', { userId, code, message: error.message });
+      if (code === 'PGRST301' || code === '42501' || /jwt|unauthor|permission|policy|rls/i.test(error.message)) {
+        return { ok: false, error: 'unauthorized', message: 'Your session has expired. Please sign in again.' };
+      }
+      if (code === '23514' || code === '23502') {
+        return { ok: false, error: 'validation', message: 'Some details are outside the allowed range. Please review and try again.' };
+      }
+      return { ok: false, error: 'unknown', message: 'We could not save your profile. Please try again.' };
+    }
+
+    if (!data) {
+      return { ok: false, error: 'unknown', message: 'We could not save your profile. Please try again.' };
+    }
+
+    const profile = toProfile(data);
+    if (!profile.professionalProfileCompleted) {
+      return { ok: false, error: 'incomplete', message: 'Some required details are missing or invalid. Please review the form and try again.' };
+    }
+
+    log.info('saveProfessionalProfile success', { userId });
+    return { ok: true, profile };
+  } catch (err: unknown) {
+    if (err instanceof TimeoutError) {
+      return { ok: false, error: 'timeout', message: 'The request timed out. Please check your connection and try again.' };
+    }
+    if (isNetworkError(err)) {
+      return { ok: false, error: 'network', message: networkErrorMessage() };
+    }
+    log.error('saveProfessionalProfile threw', { userId, message: err instanceof Error ? err.message : String(err) });
     return { ok: false, error: 'unknown', message: 'Something went wrong. Please try again.' };
   }
 }

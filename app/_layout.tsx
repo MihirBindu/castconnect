@@ -21,7 +21,8 @@ import { AppProvider } from "@/lib/AppProvider";
 import { ThemeProvider, useTheme } from "@/lib/ThemeContext";
 import { supabase, isNetworkError } from "@/lib/supabase";
 import { getProfileStatus } from "@/lib/api/profiles";
-import { ProfileGateContext, ProfileGateStatus } from "@/lib/ProfileGate";
+import { ProfileGateContext, ProfileGateState } from "@/lib/ProfileGate";
+import { OnboardingStatus } from "@/lib/types";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger('RootLayout');
@@ -37,6 +38,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding/complete-profile" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="onboarding/professional-profile" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="casting/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: "modal" }} />
@@ -56,9 +58,9 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-  // Whether the signed-in user has finished onboarding. Drives the gate that
-  // keeps incomplete users on the profile page and off the dashboard.
-  const [profileStatus, setProfileStatus] = useState<ProfileGateStatus>('idle');
+  // The user's current onboarding step (from the backend). Drives the gate that
+  // walks users through onboarding and keeps them off the dashboard until done.
+  const [gateStatus, setGateStatus] = useState<ProfileGateState>('idle');
   const [refreshKey, setRefreshKey] = useState(0);
   // Track the current route segment so we never navigate to a screen we're
   // already on — without this guard router.replace('/auth/login') causes
@@ -119,20 +121,20 @@ export default function RootLayout() {
   // trigger a redundant re-check. `refreshKey` lets the retry screen re-run it.
   useEffect(() => {
     if (!userId) {
-      setProfileStatus('idle');
+      setGateStatus('idle');
       return;
     }
     let cancelled = false;
-    setProfileStatus('checking');
-    log.info('Checking profile completion', { userId });
+    setGateStatus('checking');
+    log.info('Checking onboarding status', { userId });
     getProfileStatus(userId).then((res) => {
       if (cancelled) return;
       if (res === 'network-error') {
-        log.warn('Profile status check failed (network)', { userId });
-        setProfileStatus('error');
+        log.warn('Onboarding status check failed (network)', { userId });
+        setGateStatus('error');
       } else {
-        log.info('Profile status resolved', { userId, exists: res.exists, completed: res.completed });
-        setProfileStatus(res.completed ? 'complete' : 'incomplete');
+        log.info('Onboarding status resolved', { userId, exists: res.exists, status: res.onboardingStatus });
+        setGateStatus(res.onboardingStatus);
       }
     });
     return () => { cancelled = true; };
@@ -140,22 +142,40 @@ export default function RootLayout() {
 
   const bootLoading = (!fontsLoaded && !fontError) || session === undefined;
 
-  // Single source of truth for all auth-driven navigation.
-  // `segments` tells us where the router currently is so we never call
-  // router.replace to a screen we're already on — that's what was causing
-  // the remount loop.
+  // A concrete backend onboarding status (not the transient idle/checking/error).
+  const resolvedStatus: OnboardingStatus | null =
+    gateStatus === 'PERSONAL_PROFILE_PENDING' ||
+    gateStatus === 'PROFESSIONAL_PROFILE_PENDING' ||
+    gateStatus === 'PORTFOLIO_PENDING' ||
+    gateStatus === 'COMPLETED'
+      ? gateStatus
+      : null;
+
+  // Where the router currently is (segment 0 = section, segment 1 = onboarding step).
+  const rootSegment = segments[0] as string;
+  const onboardingStep = segments[1] as string | undefined;
+  const inAuth = rootSegment === 'auth';
+  const inOnboarding = rootSegment === 'onboarding';
+  const onPersonalStep = inOnboarding && onboardingStep === 'complete-profile';
+
+  // Whether the current status requires a redirect from where we are. Personal
+  // step is locked to step 1; professional step allows either onboarding page
+  // (so "Back" to step 1 works) but nothing outside onboarding.
+  const needsRedirect =
+    !!session &&
+    resolvedStatus !== null &&
+    ((resolvedStatus === 'PERSONAL_PROFILE_PENDING' && !onPersonalStep) ||
+      (resolvedStatus === 'PROFESSIONAL_PROFILE_PENDING' && !inOnboarding) ||
+      ((resolvedStatus === 'COMPLETED' || resolvedStatus === 'PORTFOLIO_PENDING') &&
+        (inAuth || inOnboarding)));
+
+  // Single source of truth for all auth-driven navigation. `segments` tells us
+  // where the router currently is so we never redirect to a screen we're already
+  // on — that's what was causing the remount loop.
   useEffect(() => {
     if (bootLoading) return;
 
     SplashScreen.hideAsync();
-
-    // For a signed-in user, don't route until we know their profile status —
-    // otherwise the dashboard flashes before an incomplete user is redirected.
-    if (session && profileStatus !== 'complete' && profileStatus !== 'incomplete') return;
-
-    const rootSegment = segments[0] as string;
-    const inAuth = rootSegment === 'auth';
-    const inOnboarding = rootSegment === 'onboarding';
 
     if (!session) {
       // Unauthenticated users can't reach onboarding or the dashboard.
@@ -163,23 +183,41 @@ export default function RootLayout() {
         log.info('No session — redirecting to login');
         router.replace('/auth/login');
       }
-    } else if (profileStatus === 'incomplete') {
-      if (!inOnboarding) {
-        log.info('Profile incomplete — redirecting to onboarding');
-        // Route types regenerate on `expo start`; cast keeps tsc green until then.
-        router.replace('/onboarding/complete-profile' as never);
-      }
-    } else if (profileStatus === 'complete') {
-      if (inAuth || inOnboarding) {
-        log.info('Profile complete — redirecting to app');
-        router.replace('/(tabs)');
-      }
+      return;
     }
-  }, [bootLoading, session, profileStatus, segments]);
 
-  const markComplete = useCallback(() => setProfileStatus('complete'), []);
+    // Don't route a signed-in user until we know their onboarding status —
+    // otherwise the dashboard flashes before an incomplete user is redirected.
+    if (resolvedStatus === null) return;
+
+    switch (resolvedStatus) {
+      case 'PERSONAL_PROFILE_PENDING':
+        if (!onPersonalStep) {
+          log.info('Personal profile pending — routing to step 1');
+          router.replace('/onboarding/complete-profile' as never);
+        }
+        break;
+      case 'PROFESSIONAL_PROFILE_PENDING':
+        // Allow being on either onboarding step so "Back" to step 1 works;
+        // only pull the user in if they've left onboarding entirely.
+        if (!inOnboarding) {
+          log.info('Professional profile pending — routing to step 2');
+          router.replace('/onboarding/professional-profile' as never);
+        }
+        break;
+      case 'PORTFOLIO_PENDING':
+      case 'COMPLETED':
+        if (inAuth || inOnboarding) {
+          log.info('Onboarding complete — routing to app');
+          router.replace('/(tabs)');
+        }
+        break;
+    }
+  }, [bootLoading, session, resolvedStatus, inAuth, inOnboarding, onPersonalStep]);
+
+  const setStatus = useCallback((s: OnboardingStatus) => setGateStatus(s), []);
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
-  const gateValue = useMemo(() => ({ markComplete, refresh }), [markComplete, refresh]);
+  const gateValue = useMemo(() => ({ setStatus, refresh }), [setStatus, refresh]);
 
   if (bootLoading) {
     return null;
@@ -189,14 +227,9 @@ export default function RootLayout() {
   // cover it with a full-screen gate overlay while a signed-in user is being
   // verified or redirected — that prevents the dashboard/auth screens from
   // flashing before the redirect lands.
-  const rootSegment = segments[0] as string;
-  const redirectPending =
-    !!session &&
-    ((profileStatus === 'incomplete' && rootSegment !== 'onboarding') ||
-      (profileStatus === 'complete' && (rootSegment === 'auth' || rootSegment === 'onboarding')));
   const showLoadingOverlay =
-    !!session && (profileStatus === 'idle' || profileStatus === 'checking' || redirectPending);
-  const showErrorOverlay = !!session && profileStatus === 'error';
+    !!session && (gateStatus === 'idle' || gateStatus === 'checking' || needsRedirect);
+  const showErrorOverlay = !!session && gateStatus === 'error';
 
   return (
     <ErrorBoundary>
