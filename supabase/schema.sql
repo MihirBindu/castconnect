@@ -61,18 +61,28 @@ create table if not exists public.profiles (
 );
 
 -- Auto-create a profile row when a new user signs up. Records the auth
--- provider + Google display name and never duplicates a row.
+-- provider + Google display name and never duplicates a row. The insert is
+-- wrapped so a profile-side problem can never abort auth sign-up ("Database
+-- error saving new user") — onboarding creates/completes the row via upsert.
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
-  insert into public.profiles (id, name, contact_email, auth_provider)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', ''),
-    new.email,
-    coalesce(new.raw_app_meta_data->>'provider', 'email')
-  )
-  on conflict (id) do nothing;
+  begin
+    insert into public.profiles (id, name, contact_email, auth_provider)
+    values (
+      new.id,
+      coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', ''),
+      coalesce(new.email, ''),
+      coalesce(new.raw_app_meta_data->>'provider', 'email')
+    )
+    on conflict (id) do nothing;
+  exception when others then
+    raise warning 'handle_new_user: profile insert skipped for %: %', new.id, sqlerrm;
+  end;
   return new;
 end;
 $$;
