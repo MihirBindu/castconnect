@@ -7,6 +7,7 @@ import {
   Pressable,
   Linking,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -17,6 +18,7 @@ import { useAppState } from '@/lib/store';
 import { Avatar } from '@/components/Avatar';
 import { AvailabilityBadge } from '@/components/StatusBadge';
 import { SkillTag } from '@/components/SkillTag';
+import { OfflineBanner } from '@/components/OfflineBanner';
 import { ROLE_LABELS, INDUSTRY_LABELS } from '@/lib/mock-data';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -253,7 +255,7 @@ export default function MeScreen() {
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
   const { mode, setMode } = useTheme();
-  const { myProfile, applications, conversations } = useAppState();
+  const { myProfile, applications, conversations, isLoading, retryLoad } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
@@ -278,9 +280,13 @@ export default function MeScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
+      <OfflineBanner />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 }}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={retryLoad} tintColor={C.primary} colors={[C.primary]} />
+        }
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>

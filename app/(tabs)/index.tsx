@@ -7,6 +7,7 @@ import {
   FlatList,
   Pressable,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useColors } from '@/lib/ThemeContext';
 import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { Skeleton } from '@/components/Skeleton';
 import { CastingCallCard } from '@/components/CastingCallCard';
 import { TalentCard } from '@/components/TalentCard';
 import { ApplicationStatusBadge } from '@/components/StatusBadge';
@@ -145,7 +148,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { myProfile, profiles, castingCalls, applications } = useAppState();
+  const { myProfile, profiles, castingCalls, applications, isLoading, retryLoad } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
@@ -155,9 +158,13 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
+      <OfflineBanner />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 }}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={retryLoad} tintColor={C.primary} colors={[C.primary]} />
+        }
       >
         <View style={styles.headerSection}>
           <View>
@@ -243,6 +250,15 @@ export default function HomeScreen() {
             scrollEnabled={!!featuredTalent.length}
             renderItem={({ item }) => <TalentCard profile={item} compact />}
             keyExtractor={item => item.id}
+            ListEmptyComponent={
+              isLoading ? (
+                <View style={{ flexDirection: 'row', gap: 16, paddingHorizontal: 20 }}>
+                  {[0, 1, 2].map(i => <Skeleton key={i} width={130} height={150} radius={14} />)}
+                </View>
+              ) : (
+                <Text style={[styles.appDate, { paddingHorizontal: 20 }]}>No featured talent yet</Text>
+              )
+            }
           />
         </View>
 
