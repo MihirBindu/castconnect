@@ -5,14 +5,17 @@ import {
   StyleSheet,
   FlatList,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useColors } from '@/lib/ThemeContext';
 import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { ConversationItem } from '@/components/ConversationItem';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { EmptyState } from '@/components/EmptyState';
+import { SkeletonList } from '@/components/Skeleton';
 import { Conversation } from '@/lib/types';
 
 function makeStyles(C: ThemeColors) {
@@ -70,7 +73,7 @@ export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { conversations } = useAppState();
+  const { conversations, isLoading, loadError, retryLoad } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
@@ -91,6 +94,8 @@ export default function MessagesScreen() {
         </View>
       </View>
 
+      <OfflineBanner />
+
       <FlatList
         data={sortedConversations}
         keyExtractor={item => item.id}
@@ -98,7 +103,9 @@ export default function MessagesScreen() {
           paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100,
         }}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={!!sortedConversations.length}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={retryLoad} tintColor={C.primary} colors={[C.primary]} />
+        }
         renderItem={({ item }: { item: Conversation }) => (
           <ConversationItem
             item={item}
@@ -111,11 +118,24 @@ export default function MessagesScreen() {
           <View style={styles.separator} />
         )}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={48} color={C.textTertiary} />
-            <Text style={styles.emptyText}>No messages yet</Text>
-            <Text style={styles.emptySubtext}>Start connecting with industry professionals</Text>
-          </View>
+          isLoading ? (
+            <SkeletonList count={6} />
+          ) : loadError ? (
+            <EmptyState
+              tone="error"
+              icon="alert-circle-outline"
+              title="Couldn't load messages"
+              message={loadError}
+              actionLabel="Retry"
+              onAction={retryLoad}
+            />
+          ) : (
+            <EmptyState
+              icon="chatbubbles-outline"
+              title="No messages yet"
+              message="Start connecting with industry professionals"
+            />
+          )
         }
       />
     </View>

@@ -9,6 +9,7 @@ import {
   Platform,
   Modal,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,9 @@ import { router } from 'expo-router';
 import { useColors } from '@/lib/ThemeContext';
 import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { EmptyState } from '@/components/EmptyState';
+import { SkeletonList } from '@/components/Skeleton';
 import { Avatar } from '@/components/Avatar';
 import { SkillTag } from '@/components/SkillTag';
 import { AvailabilityBadge } from '@/components/StatusBadge';
@@ -473,7 +477,7 @@ export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { profiles, crewBasket, addToCrewBasket, isInCrewBasket } = useAppState();
+  const { profiles, crewBasket, addToCrewBasket, isInCrewBasket, isLoading, loadError, retryLoad } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<CrewRole[]>([]);
   const [experienceFilter, setExperienceFilter] = useState<ExperienceFilter>('all');
@@ -777,6 +781,8 @@ export default function DiscoverScreen() {
       </View>
 
 
+      <OfflineBanner />
+
       <FlatList
         data={flatData}
         renderItem={({ item }) => {
@@ -792,12 +798,17 @@ export default function DiscoverScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={true}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={retryLoad} tintColor={C.primary} colors={[C.primary]} />
+        }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="people-outline" size={48} color={C.textTertiary} />
-            <Text style={styles.emptyText}>No professionals found</Text>
-            <Text style={styles.emptySubtext}>Adjust your filters or role selection</Text>
-          </View>
+          isLoading ? (
+            <SkeletonList count={6} />
+          ) : loadError ? (
+            <EmptyState tone="error" icon="alert-circle-outline" title="Couldn't load professionals" message={loadError} actionLabel="Retry" onAction={retryLoad} />
+          ) : (
+            <EmptyState icon="people-outline" title="No professionals found" message="Adjust your filters or role selection" />
+          )
         }
       />
 

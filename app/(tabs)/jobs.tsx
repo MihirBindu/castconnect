@@ -8,6 +8,7 @@ import {
   Platform,
   TextInput,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,9 @@ import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { CastingCallCard } from '@/components/CastingCallCard';
 import { ApplicationStatusBadge } from '@/components/StatusBadge';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { EmptyState } from '@/components/EmptyState';
+import { SkeletonList } from '@/components/Skeleton';
 import { CastingCall } from '@/lib/types';
 import { INDUSTRY_LABELS } from '@/lib/mock-data';
 import * as Haptics from 'expo-haptics';
@@ -210,7 +214,7 @@ export default function JobsScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { castingCalls, applications } = useAppState();
+  const { castingCalls, applications, isLoading, loadError, retryLoad } = useAppState();
   const [viewMode, setViewMode] = useState<ViewMode>('browse');
   const [industryFilter, setIndustryFilter] = useState('all');
   const [browseSearch, setBrowseSearch] = useState('');
@@ -278,6 +282,8 @@ export default function JobsScreen() {
           </Text>
         </Pressable>
       </View>
+
+      <OfflineBanner />
 
       {viewMode === 'browse' && (
         <View style={styles.searchContainer}>
@@ -349,12 +355,17 @@ export default function JobsScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={true}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={retryLoad} tintColor={C.primary} colors={[C.primary]} />
+          }
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="film-outline" size={48} color={C.textTertiary} />
-              <Text style={styles.emptyText}>No casting calls found</Text>
-              <Text style={styles.emptySubtext}>Check back later for new opportunities</Text>
-            </View>
+            isLoading ? (
+              <SkeletonList count={5} />
+            ) : loadError ? (
+              <EmptyState tone="error" icon="alert-circle-outline" title="Couldn't load casting calls" message={loadError} actionLabel="Retry" onAction={retryLoad} />
+            ) : (
+              <EmptyState icon="film-outline" title="No casting calls found" message="Check back later for new opportunities" />
+            )
           }
         />
       ) : (
@@ -368,6 +379,9 @@ export default function JobsScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={true}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={retryLoad} tintColor={C.primary} colors={[C.primary]} />
+          }
           renderItem={({ item }) => (
             <Pressable
               onPress={() => {
@@ -388,11 +402,13 @@ export default function JobsScreen() {
             </Pressable>
           )}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="document-outline" size={48} color={C.textTertiary} />
-              <Text style={styles.emptyText}>No applications yet</Text>
-              <Text style={styles.emptySubtext}>Start applying to casting calls</Text>
-            </View>
+            isLoading ? (
+              <SkeletonList count={4} />
+            ) : loadError ? (
+              <EmptyState tone="error" icon="alert-circle-outline" title="Couldn't load applications" message={loadError} actionLabel="Retry" onAction={retryLoad} />
+            ) : (
+              <EmptyState icon="document-outline" title="No applications yet" message="Start applying to casting calls" />
+            )
           }
         />
       )}
