@@ -146,7 +146,137 @@ export type OnboardingStatus =
   | 'PERSONAL_PROFILE_PENDING'
   | 'PROFESSIONAL_PROFILE_PENDING'
   | 'PORTFOLIO_PENDING'
+  | 'PORTFOLIO_PROCESSING'
   | 'COMPLETED';
+
+// ── Portfolio (onboarding step 3) ─────────────────────────────────────────────
+export type MediaStatus =
+  | 'SELECTED'
+  | 'UPLOADING'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED';
+
+export type ReelSourceType = 'UPLOAD' | 'EXTERNAL_LINK';
+
+export interface ProfilePhoto {
+  mediaId: string;
+  path: string; // storage object path
+  url: string; // public URL
+  status: MediaStatus;
+}
+
+export interface PortfolioPhoto {
+  mediaId: string;
+  path: string;
+  url: string;
+  caption: string;
+  displayOrder: number;
+  status: MediaStatus;
+}
+
+export interface AuditionReel {
+  id: string;
+  title: string;
+  description: string;
+  role: string;
+  language: string;
+  sourceType: ReelSourceType;
+  externalUrl?: string | null;
+  mediaId?: string | null;
+  videoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  status: MediaStatus;
+}
+
+export interface Showreel {
+  id: string;
+  title: string;
+  category: string;
+  customCategory?: string;
+  description: string;
+  year?: number | null;
+  sourceType: ReelSourceType;
+  externalUrl?: string | null;
+  mediaId?: string | null;
+  videoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  status: MediaStatus;
+}
+
+export interface NotableWork {
+  id: string;
+  projectTitle: string;
+  projectType: string;
+  role: string;
+  productionCompany: string;
+  releaseYear?: number | null;
+  projectUrl?: string | null;
+  description: string;
+}
+
+export interface Award {
+  id: string;
+  title: string;
+  issuingOrganisation: string;
+  category: string;
+  customCategory?: string;
+  year?: number | null;
+  description: string;
+  documentMediaId?: string | null;
+  documentPath?: string | null; // private bucket object path
+  verificationUrl?: string | null;
+}
+
+export const SHOWREEL_CATEGORY_OPTIONS = [
+  'Acting Showreel',
+  'Direction Showreel',
+  'Modelling Showreel',
+  'Dance Showreel',
+  'Voice-Over Showreel',
+  'Cinematography Showreel',
+  'Editing Showreel',
+  'Music Showreel',
+  'General Showreel',
+  'Other',
+] as const;
+
+export const NOTABLE_WORK_TYPE_OPTIONS = [
+  'Film',
+  'Television',
+  'Web Series',
+  'Theatre',
+  'Advertisement',
+  'Short Film',
+  'Music Video',
+  'Documentary',
+  'Corporate Video',
+  'Digital Content',
+  'Modelling Campaign',
+  'Voice-Over',
+  'Other',
+] as const;
+
+export const AWARD_CATEGORY_OPTIONS = [
+  'Award',
+  'Nomination',
+  'Official Selection',
+  'Certification',
+  'Fellowship',
+  'Competition Winner',
+  'Industry Recognition',
+  'Other',
+] as const;
+
+// Host suffixes accepted for external video links.
+export const TRUSTED_VIDEO_PLATFORMS = [
+  'youtube.com',
+  'youtu.be',
+  'vimeo.com',
+  'drive.google.com',
+  'dropbox.com',
+] as const;
 
 export type CrewRole =
   | 'Director'
@@ -212,6 +342,15 @@ export interface UserProfile {
   availabilityStatus?: ProfessionalAvailabilityStatus | null;
   professionalProfileCompleted?: boolean;
   onboardingStatus?: OnboardingStatus;
+
+  // ── Portfolio onboarding fields ──
+  profilePhoto?: ProfilePhoto | null;
+  portfolioPhotos?: PortfolioPhoto[];
+  auditionReels?: AuditionReel[];
+  showreels?: Showreel[];
+  notableWork?: NotableWork[];
+  awards?: Award[];
+  portfolioCompleted?: boolean;
 }
 
 export interface CastingCall {

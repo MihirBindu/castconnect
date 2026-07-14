@@ -56,6 +56,16 @@ create table if not exists public.profiles (
   professional_profile_completed boolean not null default false,
   onboarding_status              text    not null default 'PERSONAL_PROFILE_PENDING',
 
+  -- ── Portfolio onboarding fields (step 3) ──
+  profile_photo       jsonb,
+  portfolio_photos    jsonb   not null default '[]'::jsonb,
+  audition_reels      jsonb   not null default '[]'::jsonb,
+  showreels           jsonb   not null default '[]'::jsonb,
+  notable_work        jsonb   not null default '[]'::jsonb,
+  awards              jsonb   not null default '[]'::jsonb,
+  portfolio_submitted boolean not null default false,
+  portfolio_completed boolean not null default false,
+
   constraint profiles_age_chk        check (age is null or (age between 18 and 100)),
   constraint profiles_height_chk     check (height_cm is null or (height_cm between 90 and 250)),
   constraint profiles_body_type_chk  check (
@@ -75,7 +85,8 @@ create table if not exists public.profiles (
   ),
   constraint profiles_onboarding_status_chk check (
     onboarding_status in (
-      'PERSONAL_PROFILE_PENDING','PROFESSIONAL_PROFILE_PENDING','PORTFOLIO_PENDING','COMPLETED'
+      'PERSONAL_PROFILE_PENDING','PROFESSIONAL_PROFILE_PENDING',
+      'PORTFOLIO_PENDING','PORTFOLIO_PROCESSING','COMPLETED'
     )
   )
 );
@@ -153,7 +164,10 @@ create trigger trg_set_profile_completion
 -- new.profile_completed is already set when we derive onboarding_status.
 -- Kept separate from set_profile_completion so the two steps don't entangle.
 create or replace function public.set_onboarding_status()
-returns trigger language plpgsql as $$
+returns trigger
+language plpgsql
+set search_path = public
+as $$
 declare
   v_bio         text := btrim(coalesce(new.bio, ''));
   v_role_count  int  := coalesce(array_length(new.roles, 1), 0);
@@ -172,10 +186,19 @@ begin
     and char_length(v_bio) between 50 and 1000
     and v_bio ~ '[[:alpha:]]';
 
+  -- Portfolio is complete only when explicitly submitted AND a valid photo exists
+  -- (a draft save must never finish onboarding).
+  new.portfolio_completed :=
+        coalesce(new.portfolio_submitted, false)
+    and new.profile_photo is not null
+    and coalesce(new.profile_photo->>'url', '') <> ''
+    and coalesce(new.profile_photo->>'status', 'COMPLETED') = 'COMPLETED';
+
   new.onboarding_status :=
     case
       when not coalesce(new.profile_completed, false) then 'PERSONAL_PROFILE_PENDING'
       when not new.professional_profile_completed     then 'PROFESSIONAL_PROFILE_PENDING'
+      when not new.portfolio_completed                then 'PORTFOLIO_PENDING'
       else 'COMPLETED'
     end;
 
@@ -333,3 +356,40 @@ create policy "crew_basket_items_insert" on public.crew_basket_items for insert
   with check (auth.uid() = (select owner_id from public.crew_baskets where id = basket_id));
 create policy "crew_basket_items_delete" on public.crew_basket_items for delete
   using (auth.uid() = (select owner_id from public.crew_baskets where id = basket_id));
+
+-- ────────────────────────────────────────────────────────────
+-- STORAGE — portfolio media (see supabase/migrations/0005_portfolio.sql)
+--   portfolio-media : PUBLIC showcase images (profile photo, portfolio photos)
+--   portfolio-docs  : PRIVATE award documents (served via signed URLs)
+-- Owner-scoped writes; path convention {userId}/{kind}/{uuid}.{ext}.
+-- ────────────────────────────────────────────────────────────
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values
+  ('portfolio-media', 'portfolio-media', true, 10485760,
+     array['image/jpeg','image/png','image/webp']),
+  ('portfolio-docs', 'portfolio-docs', false, 15728640,
+     array['application/pdf','image/jpeg','image/png','image/webp'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "portfolio_media_insert" on storage.objects;
+drop policy if exists "portfolio_media_update" on storage.objects;
+drop policy if exists "portfolio_media_delete" on storage.objects;
+drop policy if exists "portfolio_docs_rw"      on storage.objects;
+
+create policy "portfolio_media_insert"
+  on storage.objects for insert to authenticated
+  with check (bucket_id = 'portfolio-media' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "portfolio_media_update"
+  on storage.objects for update to authenticated
+  using (bucket_id = 'portfolio-media' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'portfolio-media' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "portfolio_media_delete"
+  on storage.objects for delete to authenticated
+  using (bucket_id = 'portfolio-media' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "portfolio_docs_rw"
+  on storage.objects for all to authenticated
+  using (bucket_id = 'portfolio-docs' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'portfolio-docs' and (storage.foldername(name))[1] = auth.uid()::text);

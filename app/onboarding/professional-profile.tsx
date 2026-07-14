@@ -266,8 +266,9 @@ export default function ProfessionalProfileScreen() {
           updatedAt: p.updatedAt,
         });
         dirtyRef.current = false;
-        setStatus(p.onboardingStatus ?? 'COMPLETED');
-        router.replace('/(tabs)');
+        // Professional step done → advance to the portfolio step (step 3).
+        setStatus(p.onboardingStatus ?? 'PORTFOLIO_PENDING');
+        router.replace('/onboarding/portfolio' as never);
         return;
       }
 

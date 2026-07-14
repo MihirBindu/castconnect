@@ -8,6 +8,12 @@ import {
   LanguageEntry,
   ProfessionalAvailabilityStatus,
   OnboardingStatus,
+  ProfilePhoto,
+  PortfolioPhoto,
+  AuditionReel,
+  Showreel,
+  NotableWork,
+  Award,
 } from '../types';
 
 const log = createLogger('api/profiles');
@@ -73,6 +79,13 @@ function toProfile(row: Record<string, unknown>): UserProfile {
     availabilityStatus: (row.availability_status as ProfessionalAvailabilityStatus | null) ?? null,
     professionalProfileCompleted: (row.professional_profile_completed as boolean) ?? false,
     onboardingStatus: (row.onboarding_status as OnboardingStatus) ?? 'PERSONAL_PROFILE_PENDING',
+    profilePhoto: (row.profile_photo as ProfilePhoto | null) ?? null,
+    portfolioPhotos: (row.portfolio_photos as PortfolioPhoto[]) ?? [],
+    auditionReels: (row.audition_reels as AuditionReel[]) ?? [],
+    showreels: (row.showreels as Showreel[]) ?? [],
+    notableWork: (row.notable_work as NotableWork[]) ?? [],
+    awards: (row.awards as Award[]) ?? [],
+    portfolioCompleted: (row.portfolio_completed as boolean) ?? false,
   };
 }
 
@@ -419,6 +432,94 @@ export async function saveProfessionalProfile(
       return { ok: false, error: 'network', message: networkErrorMessage() };
     }
     log.error('saveProfessionalProfile threw', { userId, message: err instanceof Error ? err.message : String(err) });
+    return { ok: false, error: 'unknown', message: 'Something went wrong. Please try again.' };
+  }
+}
+
+// ── Portfolio (onboarding step 3) ─────────────────────────────────────────────
+
+export interface PortfolioInput {
+  profilePhoto: ProfilePhoto | null;
+  portfolioPhotos: PortfolioPhoto[];
+  auditionReels: AuditionReel[];
+  showreels: Showreel[];
+  notableWork: NotableWork[];
+  awards: Award[];
+}
+
+export type SavePortfolioResult =
+  | { ok: true; profile: UserProfile }
+  | { ok: false; error: CompleteProfileError; message: string };
+
+/**
+ * Upserts portfolio data keyed on the auth user id (no duplicate rows, so a
+ * retried submission is idempotent). When `complete` is true, re-reads the
+ * server-computed portfolio_completed flag — a missing profile photo can't be
+ * self-reported as complete. Draft saves skip that gate.
+ */
+export async function savePortfolio(
+  userId: string,
+  input: PortfolioInput,
+  opts: { complete: boolean },
+): Promise<SavePortfolioResult> {
+  log.debug('savePortfolio', { userId, complete: opts.complete });
+
+  const payload: Record<string, unknown> = {
+    id: userId,
+    profile_photo: input.profilePhoto,
+    portfolio_photos: input.portfolioPhotos,
+    audition_reels: input.auditionReels,
+    showreels: input.showreels,
+    notable_work: input.notableWork,
+    awards: input.awards,
+  };
+  // Only "Complete Profile" flips the explicit submit flag; draft saves leave it
+  // untouched so a draft (even with a photo) never finishes onboarding.
+  if (opts.complete) payload.portfolio_submitted = true;
+
+  try {
+    const query = supabase
+      .from('profiles')
+      .upsert(payload, { onConflict: 'id' })
+      .select('*')
+      .single();
+
+    const { data, error } = await withTimeout(query, SAVE_TIMEOUT_MS);
+
+    if (error) {
+      if (isNetworkError({ message: error.message })) {
+        return { ok: false, error: 'network', message: networkErrorMessage() };
+      }
+      const code = error.code ?? '';
+      log.error('savePortfolio failed', { userId, code, message: error.message });
+      if (code === 'PGRST301' || code === '42501' || /jwt|unauthor|permission|policy|rls/i.test(error.message)) {
+        return { ok: false, error: 'unauthorized', message: 'Your session has expired. Please sign in again.' };
+      }
+      if (code === '23514' || code === '23502') {
+        return { ok: false, error: 'validation', message: 'Some details are outside the allowed range. Please review and try again.' };
+      }
+      return { ok: false, error: 'unknown', message: 'We could not save your portfolio. Please try again.' };
+    }
+
+    if (!data) {
+      return { ok: false, error: 'unknown', message: 'We could not save your portfolio. Please try again.' };
+    }
+
+    const profile = toProfile(data);
+    if (opts.complete && !profile.portfolioCompleted) {
+      return { ok: false, error: 'incomplete', message: 'Please upload a profile photo to complete your profile.' };
+    }
+
+    log.info('savePortfolio success', { userId, complete: opts.complete });
+    return { ok: true, profile };
+  } catch (err: unknown) {
+    if (err instanceof TimeoutError) {
+      return { ok: false, error: 'timeout', message: 'The request timed out. Please check your connection and try again.' };
+    }
+    if (isNetworkError(err)) {
+      return { ok: false, error: 'network', message: networkErrorMessage() };
+    }
+    log.error('savePortfolio threw', { userId, message: err instanceof Error ? err.message : String(err) });
     return { ok: false, error: 'unknown', message: 'Something went wrong. Please try again.' };
   }
 }

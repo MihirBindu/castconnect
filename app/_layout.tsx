@@ -27,6 +27,31 @@ import { createLogger } from "@/lib/logger";
 
 const log = createLogger('RootLayout');
 
+// Onboarding is an ordered 3-step flow. Users may go BACK to an earlier step
+// but never skip ahead of their current pending step.
+const ONBOARDING_ROUTES = [
+  '/onboarding/complete-profile',
+  '/onboarding/professional-profile',
+  '/onboarding/portfolio',
+] as const;
+const ONBOARDING_STEP_COUNT = ONBOARDING_ROUTES.length; // 3 == onboarding complete
+
+function statusToStepIndex(s: OnboardingStatus): number {
+  if (s === 'PERSONAL_PROFILE_PENDING') return 0;
+  if (s === 'PROFESSIONAL_PROFILE_PENDING') return 1;
+  if (s === 'PORTFOLIO_PENDING' || s === 'PORTFOLIO_PROCESSING') return 2;
+  return ONBOARDING_STEP_COUNT; // COMPLETED
+}
+
+function onboardingStepIndex(seg?: string): number | null {
+  switch (seg) {
+    case 'complete-profile': return 0;
+    case 'professional-profile': return 1;
+    case 'portfolio': return 2;
+    default: return null;
+  }
+}
+
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
@@ -39,6 +64,7 @@ function RootLayoutNav() {
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding/complete-profile" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="onboarding/professional-profile" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="onboarding/portfolio" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="casting/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: "modal" }} />
@@ -147,6 +173,7 @@ export default function RootLayout() {
     gateStatus === 'PERSONAL_PROFILE_PENDING' ||
     gateStatus === 'PROFESSIONAL_PROFILE_PENDING' ||
     gateStatus === 'PORTFOLIO_PENDING' ||
+    gateStatus === 'PORTFOLIO_PROCESSING' ||
     gateStatus === 'COMPLETED'
       ? gateStatus
       : null;
@@ -156,18 +183,19 @@ export default function RootLayout() {
   const onboardingStep = segments[1] as string | undefined;
   const inAuth = rootSegment === 'auth';
   const inOnboarding = rootSegment === 'onboarding';
-  const onPersonalStep = inOnboarding && onboardingStep === 'complete-profile';
 
-  // Whether the current status requires a redirect from where we are. Personal
-  // step is locked to step 1; professional step allows either onboarding page
-  // (so "Back" to step 1 works) but nothing outside onboarding.
+  const pendingStep = resolvedStatus !== null ? statusToStepIndex(resolvedStatus) : null; // 0..3
+  const currentStep = inOnboarding ? onboardingStepIndex(onboardingStep) : null; // 0..2 | null
+
+  // A redirect is pending when: onboarding is complete but we're still in
+  // auth/onboarding, or we're not on an allowed step (outside onboarding, or
+  // trying to skip ahead of the pending step).
   const needsRedirect =
     !!session &&
-    resolvedStatus !== null &&
-    ((resolvedStatus === 'PERSONAL_PROFILE_PENDING' && !onPersonalStep) ||
-      (resolvedStatus === 'PROFESSIONAL_PROFILE_PENDING' && !inOnboarding) ||
-      ((resolvedStatus === 'COMPLETED' || resolvedStatus === 'PORTFOLIO_PENDING') &&
-        (inAuth || inOnboarding)));
+    pendingStep !== null &&
+    (pendingStep >= ONBOARDING_STEP_COUNT
+      ? inAuth || inOnboarding
+      : currentStep === null || currentStep > pendingStep);
 
   // Single source of truth for all auth-driven navigation. `segments` tells us
   // where the router currently is so we never redirect to a screen we're already
@@ -188,32 +216,24 @@ export default function RootLayout() {
 
     // Don't route a signed-in user until we know their onboarding status —
     // otherwise the dashboard flashes before an incomplete user is redirected.
-    if (resolvedStatus === null) return;
+    if (pendingStep === null) return;
 
-    switch (resolvedStatus) {
-      case 'PERSONAL_PROFILE_PENDING':
-        if (!onPersonalStep) {
-          log.info('Personal profile pending — routing to step 1');
-          router.replace('/onboarding/complete-profile' as never);
-        }
-        break;
-      case 'PROFESSIONAL_PROFILE_PENDING':
-        // Allow being on either onboarding step so "Back" to step 1 works;
-        // only pull the user in if they've left onboarding entirely.
-        if (!inOnboarding) {
-          log.info('Professional profile pending — routing to step 2');
-          router.replace('/onboarding/professional-profile' as never);
-        }
-        break;
-      case 'PORTFOLIO_PENDING':
-      case 'COMPLETED':
-        if (inAuth || inOnboarding) {
-          log.info('Onboarding complete — routing to app');
-          router.replace('/(tabs)');
-        }
-        break;
+    if (pendingStep >= ONBOARDING_STEP_COUNT) {
+      // Onboarding complete — leave auth/onboarding for the dashboard.
+      if (inAuth || inOnboarding) {
+        log.info('Onboarding complete — routing to app');
+        router.replace('/(tabs)');
+      }
+      return;
     }
-  }, [bootLoading, session, resolvedStatus, inAuth, inOnboarding, onPersonalStep]);
+
+    // Pull the user into onboarding if they're outside it, or clamp a skip-ahead
+    // back to the pending step. Being on an earlier step (Back) is allowed.
+    if (currentStep === null || currentStep > pendingStep) {
+      log.info('Routing to onboarding step', { pendingStep });
+      router.replace(ONBOARDING_ROUTES[pendingStep] as never);
+    }
+  }, [bootLoading, session, pendingStep, currentStep, inAuth, inOnboarding]);
 
   const setStatus = useCallback((s: OnboardingStatus) => setGateStatus(s), []);
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
