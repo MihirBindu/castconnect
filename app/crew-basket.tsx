@@ -160,6 +160,18 @@ function makeStyles(C: ThemeColors) {
       borderWidth: 1,
       borderColor: C.border,
     },
+    memberCardStale: {
+      opacity: 0.7,
+      borderStyle: 'dashed',
+    },
+    staleAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: C.surfaceLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     memberInfo: {
       flex: 1,
       flexDirection: 'row',
@@ -267,13 +279,14 @@ export default function CrewBasketScreen() {
   }, [profiles]);
 
   const sections = useMemo(() => {
-    const grouped: Record<string, { profileId: string; profile: UserProfile }[]> = {};
+    // Keep members whose profile is no longer available (deleted / left the
+    // platform) as `profile: null` so they render as a removable "unavailable"
+    // row instead of silently vanishing from a basket that still counts them.
+    const grouped: Record<string, { profileId: string; profile: UserProfile | null }[]> = {};
     for (const item of crewBasket) {
-      const profile = profileMap[item.profileId];
-      if (!profile) continue;
       const role = item.assignedRole;
       if (!grouped[role]) grouped[role] = [];
-      grouped[role].push({ profileId: item.profileId, profile });
+      grouped[role].push({ profileId: item.profileId, profile: profileMap[item.profileId] ?? null });
     }
     return Object.entries(grouped).map(([role, data]) => ({
       title: role,
@@ -403,36 +416,58 @@ export default function CrewBasketScreen() {
                 <Text style={styles.sectionCount}>{section.data.length}</Text>
               </View>
             )}
-            renderItem={({ item }) => (
-              <View style={styles.memberCard}>
-                <Pressable
-                  style={styles.memberInfo}
-                  onPress={() => router.push({ pathname: '/profile/[id]', params: { id: item.profileId } })}
-                >
-                  <Avatar name={item.profile.name} size={44} showVerified={item.profile.isVerified} />
-                  <View style={styles.memberDetails}>
-                    <Text style={styles.memberName}>{item.profile.name}</Text>
-                    <Text style={styles.memberTitle}>{item.profile.title}</Text>
-                    <View style={styles.memberMeta}>
-                      <View style={styles.ratingRow}>
-                        <Ionicons name="star" size={10} color={C.primary} />
-                        <Text style={styles.ratingText}>{item.profile.rating.toFixed(1)}</Text>
+            renderItem={({ item }) => {
+              const profile = item.profile;
+              return profile ? (
+                <View style={styles.memberCard}>
+                  <Pressable
+                    style={styles.memberInfo}
+                    onPress={() => router.push({ pathname: '/profile/[id]', params: { id: item.profileId } })}
+                  >
+                    <Avatar name={profile.name} size={44} showVerified={profile.isVerified} />
+                    <View style={styles.memberDetails}>
+                      <Text style={styles.memberName}>{profile.name}</Text>
+                      <Text style={styles.memberTitle}>{profile.title}</Text>
+                      <View style={styles.memberMeta}>
+                        <View style={styles.ratingRow}>
+                          <Ionicons name="star" size={10} color={C.primary} />
+                          <Text style={styles.ratingText}>{profile.rating.toFixed(1)}</Text>
+                        </View>
+                        <Text style={styles.memberRate}>
+                          {profile.dayRate > 0 ? `${formatBudget(profile.dayRate)}/day` : 'N/A'}
+                        </Text>
                       </View>
-                      <Text style={styles.memberRate}>
-                        {item.profile.dayRate > 0 ? `${formatBudget(item.profile.dayRate)}/day` : 'N/A'}
-                      </Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleRemove(item.profileId, profile.name)}
+                    style={styles.removeBtn}
+                    testID={`remove-${item.profileId}`}
+                  >
+                    <Ionicons name="close-circle" size={22} color="#FF3B30" />
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={[styles.memberCard, styles.memberCardStale]}>
+                  <View style={styles.memberInfo}>
+                    <View style={styles.staleAvatar}>
+                      <Ionicons name="person-remove-outline" size={20} color={C.textTertiary} />
+                    </View>
+                    <View style={styles.memberDetails}>
+                      <Text style={styles.memberName}>No longer available</Text>
+                      <Text style={styles.memberTitle}>This professional is no longer on CastConnect</Text>
                     </View>
                   </View>
-                </Pressable>
-                <Pressable
-                  onPress={() => handleRemove(item.profileId, item.profile.name)}
-                  style={styles.removeBtn}
-                  testID={`remove-${item.profileId}`}
-                >
-                  <Ionicons name="close-circle" size={22} color="#FF3B30" />
-                </Pressable>
-              </View>
-            )}
+                  <Pressable
+                    onPress={() => handleRemove(item.profileId, 'this member')}
+                    style={styles.removeBtn}
+                    testID={`remove-${item.profileId}`}
+                  >
+                    <Ionicons name="close-circle" size={22} color="#FF3B30" />
+                  </Pressable>
+                </View>
+              );
+            }}
             contentContainerStyle={[
               styles.listContent,
               { paddingBottom: Platform.OS === 'web' ? 34 + 100 : 140 },

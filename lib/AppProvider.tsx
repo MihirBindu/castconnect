@@ -260,8 +260,10 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   }, []);
 
   const addToCrewBasket = useCallback((profileId: string, role: CrewRole) => {
+    // Can't shortlist yourself (profiles.id === auth user id).
+    if (sessionRef.current?.user?.id === profileId) return;
     setCrewBasket(prev => {
-      if (prev.some(item => item.profileId === profileId)) return prev;
+      if (prev.some(item => item.profileId === profileId)) return prev; // no duplicates
       const updated = [...prev, { profileId, assignedRole: role, addedAt: new Date().toISOString() }];
       saveCrewBasket(updated);
       return updated;

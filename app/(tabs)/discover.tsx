@@ -488,6 +488,22 @@ export default function DiscoverScreen() {
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
+  const filtersActive =
+    searchQuery.trim() !== '' ||
+    selectedRoles.length > 0 ||
+    experienceFilter !== 'all' ||
+    locationFilter !== 'All Locations' ||
+    availFilter !== 'all';
+
+  const resetFilters = useCallback(() => {
+    Haptics.selectionAsync();
+    setSearchQuery('');
+    setSelectedRoles([]);
+    setExperienceFilter('all');
+    setLocationFilter('All Locations');
+    setAvailFilter('all');
+  }, []);
+
   const toggleRole = useCallback((role: CrewRole) => {
     Haptics.selectionAsync();
     setSelectedRoles(prev =>
@@ -806,8 +822,10 @@ export default function DiscoverScreen() {
             <SkeletonList count={6} />
           ) : loadError ? (
             <EmptyState tone="error" icon="alert-circle-outline" title="Couldn't load professionals" message={loadError} actionLabel="Retry" onAction={retryLoad} />
+          ) : filtersActive ? (
+            <EmptyState icon="people-outline" title="No matches" message="No professionals match your filters." actionLabel="Reset filters" onAction={resetFilters} />
           ) : (
-            <EmptyState icon="people-outline" title="No professionals found" message="Adjust your filters or role selection" />
+            <EmptyState icon="people-outline" title="No professionals found" message="Check back later as more professionals join." />
           )
         }
       />
