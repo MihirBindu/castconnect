@@ -238,8 +238,10 @@ export default function JobsScreen() {
     return results;
   }, [castingCalls, industryFilter, browseSearch]);
 
+  const appliedIds = useMemo(() => new Set(applications.map(a => a.castingCallId)), [applications]);
+
   const renderCallItem = ({ item }: { item: CastingCall }) => (
-    <CastingCallCard item={item} />
+    <CastingCallCard item={item} applied={appliedIds.has(item.id)} />
   );
 
   return (

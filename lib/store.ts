@@ -2,6 +2,10 @@ import { createContext, useContext } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole } from './types';
 
+export type ApplyOutcome =
+  | { ok: true; alreadyApplied: boolean }
+  | { ok: false; message: string };
+
 export interface AppState {
   session: Session | null;
   myProfile: UserProfile;
@@ -17,7 +21,8 @@ export interface AppState {
   loadError: string | null;
   retryLoad: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
-  addApplication: (castingCallId: string, castingCallTitle: string) => void;
+  addApplication: (castingCallId: string, castingCallTitle: string) => Promise<ApplyOutcome>;
+  withdrawApplication: (castingCallId: string) => Promise<{ ok: boolean; message?: string }>;
   sendMessage: (conversationId: string, content: string) => void;
   toggleConnection: (userId: string) => void;
   addToCrewBasket: (profileId: string, role: CrewRole) => void;

@@ -2,14 +2,14 @@ import React, { useState, useMemo, useCallback, ReactNode, useEffect, useRef } f
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { Session } from '@supabase/supabase-js';
-import { AppContext, AppState } from './store';
+import { AppContext, AppState, ApplyOutcome } from './store';
 import { supabase, isNetworkError, NetworkError, networkErrorMessage } from './supabase';
 import { createLogger } from './logger';
 import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole } from './types';
 import { getProfile, getProfiles } from './api/profiles';
 import { getCastingCalls } from './api/castingCalls';
 import { getConversations, getMessages as fetchMessages } from './api/messages';
-import { getMyApplications } from './api/applications';
+import { getMyApplications, applyToCastingCall, withdrawApplication as withdrawApplicationApi } from './api/applications';
 import {
   MY_PROFILE,
   SAMPLE_PROFILES,
@@ -169,14 +169,14 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     });
   }, []);
 
-  const addApplication = useCallback((castingCallId: string, castingCallTitle: string) => {
+  const addLocalApplication = useCallback((castingCallId: string, castingCallTitle: string, applicantId: string) => {
     setApplications(prev => {
       if (prev.some(a => a.castingCallId === castingCallId)) return prev;
       const newApp: Application = {
         id: Crypto.randomUUID(),
         castingCallId,
         castingCallTitle,
-        applicantId: 'me',
+        applicantId,
         applicantName: myProfile.name,
         status: 'applied',
         appliedAt: new Date().toISOString(),
@@ -187,6 +187,35 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
       return updated;
     });
   }, [myProfile.name]);
+
+  const addApplication = useCallback(async (castingCallId: string, castingCallTitle: string): Promise<ApplyOutcome> => {
+    const uid = sessionRef.current?.user?.id;
+    if (uid) {
+      // Persist first — the unique constraint + trigger make this the source of
+      // truth (idempotent, closed/deadline enforced) — then reflect locally.
+      const res = await applyToCastingCall(castingCallId, uid, '');
+      if (!res.ok) return { ok: false, message: res.message };
+      addLocalApplication(castingCallId, castingCallTitle, uid);
+      return { ok: true, alreadyApplied: res.alreadyApplied };
+    }
+    // Demo / unauthenticated → local only.
+    addLocalApplication(castingCallId, castingCallTitle, 'me');
+    return { ok: true, alreadyApplied: false };
+  }, [addLocalApplication]);
+
+  const withdrawApplication = useCallback(async (castingCallId: string): Promise<{ ok: boolean; message?: string }> => {
+    const uid = sessionRef.current?.user?.id;
+    if (uid) {
+      const res = await withdrawApplicationApi(castingCallId, uid);
+      if (!res.ok) return res;
+    }
+    setApplications(prev => {
+      const updated = prev.filter(a => a.castingCallId !== castingCallId);
+      saveApplications(updated);
+      return updated;
+    });
+    return { ok: true };
+  }, []);
 
   const sendMessage = useCallback((conversationId: string, content: string) => {
     const newMsg: Message = {
@@ -281,6 +310,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     retryLoad,
     updateProfile,
     addApplication,
+    withdrawApplication,
     sendMessage,
     toggleConnection,
     addToCrewBasket,
@@ -289,7 +319,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setCrewProjectName,
     isInCrewBasket,
     signOut,
-  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, isOffline, loadError, retryLoad, updateProfile, addApplication, sendMessage, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
+  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, isOffline, loadError, retryLoad, updateProfile, addApplication, withdrawApplication, sendMessage, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>
