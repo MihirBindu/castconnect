@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 interface CastingCallCardProps {
   item: CastingCall;
   compact?: boolean;
+  applied?: boolean;
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -67,6 +68,20 @@ function makeStyles(C: ThemeColors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+    },
+    appliedBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+      backgroundColor: 'rgba(52, 199, 89, 0.12)',
+    },
+    appliedBadgeText: {
+      fontSize: 11,
+      color: '#34C759',
+      fontFamily: 'DMSans_600SemiBold',
     },
     openDot: {
       width: 6,
@@ -150,7 +165,7 @@ function makeStyles(C: ThemeColors) {
   });
 }
 
-export function CastingCallCard({ item, compact }: CastingCallCardProps) {
+export function CastingCallCard({ item, compact, applied }: CastingCallCardProps) {
   const C = useColors();
   const styles = React.useMemo(() => makeStyles(C), [C]);
 
@@ -173,6 +188,12 @@ export function CastingCallCard({ item, compact }: CastingCallCardProps) {
             <View style={styles.openBadge}>
               <View style={styles.openDot} />
               <Text style={styles.openText}>Open</Text>
+            </View>
+          )}
+          {applied && (
+            <View style={styles.appliedBadge}>
+              <Ionicons name="checkmark-circle" size={12} color="#34C759" />
+              <Text style={styles.appliedBadgeText}>Applied</Text>
             </View>
           )}
         </View>

@@ -270,6 +270,60 @@ create trigger on_application_created
   after insert on public.applications
   for each row execute procedure public.increment_applicant_count();
 
+-- Reject applications to a closed or past-deadline call (server-side guard that
+-- mirrors the client checks — the unique(casting_call_id, applicant_id)
+-- constraint separately makes a retried apply idempotent).
+create or replace function public.check_application_open()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status   text;
+  v_deadline date;
+begin
+  select status, deadline into v_status, v_deadline
+  from public.casting_calls where id = new.casting_call_id;
+
+  if v_status is null then
+    raise exception 'This casting call no longer exists.' using errcode = 'P0001';
+  end if;
+  if v_status <> 'open' then
+    raise exception 'This casting call is closed.' using errcode = 'P0001';
+  end if;
+  if v_deadline is not null and v_deadline < current_date then
+    raise exception 'The application deadline has passed.' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_check_application_open on public.applications;
+create trigger trg_check_application_open
+  before insert on public.applications
+  for each row execute function public.check_application_open();
+
+-- Keep applicant_count correct when an application is withdrawn.
+create or replace function public.decrement_applicant_count()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.casting_calls
+    set applicant_count = greatest(applicant_count - 1, 0)
+  where id = old.casting_call_id;
+  return old;
+end;
+$$;
+
+drop trigger if exists on_application_deleted on public.applications;
+create trigger on_application_deleted
+  after delete on public.applications
+  for each row execute function public.decrement_applicant_count();
+
 -- ────────────────────────────────────────────────────────────
 -- MESSAGES
 -- ────────────────────────────────────────────────────────────
@@ -338,6 +392,8 @@ create policy "applications_select" on public.applications for select
 create policy "applications_insert" on public.applications for insert with check (auth.uid() = applicant_id);
 create policy "applications_update" on public.applications for update
   using (auth.uid() = (select posted_by from public.casting_calls where id = casting_call_id));
+create policy "applications_delete" on public.applications for delete
+  using (auth.uid() = applicant_id);
 
 -- messages: sender or receiver can read, sender inserts
 create policy "messages_select" on public.messages for select using (auth.uid() in (sender_id, receiver_id));

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -226,6 +227,18 @@ function makeStyles(C: ThemeColors) {
       color: '#34C759',
       fontFamily: 'DMSans_700Bold',
     },
+    withdrawBtn: {
+      paddingVertical: 12,
+      borderRadius: 12,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: C.accentRed,
+    },
+    withdrawBtnText: {
+      fontSize: 14,
+      color: C.accentRed,
+      fontFamily: 'DMSans_600SemiBold',
+    },
     notFound: {
       flex: 1,
       alignItems: 'center',
@@ -250,7 +263,9 @@ export default function CastingCallDetail() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { castingCalls, applications, addApplication } = useAppState();
+  const { castingCalls, applications, addApplication, withdrawApplication } = useAppState();
+  const [applying, setApplying] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
@@ -271,14 +286,56 @@ export default function CastingCallDetail() {
     );
   }
 
-  const handleApply = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    addApplication(call.id, call.title);
-    Alert.alert('Applied!', 'Your application has been submitted successfully.');
-  };
-
   const deadlineDate = new Date(call.deadline);
   const isExpired = deadlineDate < new Date();
+  const isClosed = call.status !== 'open';
+  const canApply = !isExpired && !isClosed;
+
+  const handleApply = async () => {
+    if (applying || !canApply) return;
+    setApplying(true);
+    try {
+      const res = await addApplication(call.id, call.title);
+      if (res.ok) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          res.alreadyApplied ? 'Already applied' : 'Applied!',
+          res.alreadyApplied
+            ? 'You have already applied to this casting call.'
+            : 'Your application has been submitted successfully.',
+        );
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Could not apply', res.message);
+      }
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const handleWithdraw = () => {
+    Alert.alert('Withdraw application?', 'You can apply again later while the call is open.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Withdraw',
+        style: 'destructive',
+        onPress: async () => {
+          if (withdrawing) return;
+          setWithdrawing(true);
+          try {
+            const res = await withdrawApplication(call.id);
+            if (res.ok) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else {
+              Alert.alert('Could not withdraw', res.message ?? 'Please try again.');
+            }
+          } finally {
+            setWithdrawing(false);
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
@@ -388,27 +445,50 @@ export default function CastingCallDetail() {
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, Platform.OS === 'web' ? 34 : 16) }]}>
         {hasApplied ? (
-          <View style={styles.appliedBar}>
-            <Ionicons name="checkmark-circle" size={22} color="#34C759" />
-            <Text style={styles.appliedText}>
-              {application?.status === 'shortlisted' ? 'Shortlisted' :
-               application?.status === 'selected' ? 'Selected' :
-               application?.status === 'rejected' ? 'Not Selected' : 'Applied'}
-            </Text>
+          <View style={{ gap: 10 }}>
+            <View style={styles.appliedBar}>
+              <Ionicons name="checkmark-circle" size={22} color="#34C759" />
+              <Text style={styles.appliedText}>
+                {application?.status === 'shortlisted' ? 'Shortlisted' :
+                 application?.status === 'selected' ? 'Selected' :
+                 application?.status === 'rejected' ? 'Not Selected' : 'Applied'}
+              </Text>
+            </View>
+            {application?.status === 'applied' && (
+              <Pressable
+                onPress={handleWithdraw}
+                disabled={withdrawing}
+                style={({ pressed }) => [styles.withdrawBtn, pressed && { opacity: 0.7 }]}
+                accessibilityRole="button"
+                accessibilityLabel="Withdraw application"
+              >
+                {withdrawing ? (
+                  <ActivityIndicator color={C.accentRed} />
+                ) : (
+                  <Text style={styles.withdrawBtnText}>Withdraw Application</Text>
+                )}
+              </Pressable>
+            )}
           </View>
         ) : (
           <Pressable
             onPress={handleApply}
-            disabled={isExpired}
+            disabled={!canApply || applying}
             style={({ pressed }) => [
               styles.applyBtn,
               pressed && { opacity: 0.85 },
-              isExpired && styles.applyBtnDisabled,
+              (!canApply || applying) && styles.applyBtnDisabled,
             ]}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canApply || applying }}
           >
-            <Text style={styles.applyBtnText}>
-              {isExpired ? 'Deadline Passed' : 'Apply Now'}
-            </Text>
+            {applying ? (
+              <ActivityIndicator color={C.black} />
+            ) : (
+              <Text style={styles.applyBtnText}>
+                {isClosed ? 'Closed' : isExpired ? 'Deadline Passed' : 'Apply Now'}
+              </Text>
+            )}
           </Pressable>
         )}
       </View>
