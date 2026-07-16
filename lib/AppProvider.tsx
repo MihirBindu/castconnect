@@ -15,6 +15,7 @@ import { getNotifications, markAllNotificationsRead } from './api/notifications'
 import { getMyBlocks, blockUser as blockUserApi, unblockUser as unblockUserApi, reportUser as reportUserApi } from './api/blocks';
 import { getSavedSearches, addSavedSearch, deleteSavedSearch as deleteSavedSearchApi } from './api/savedSearches';
 import { getProfileViewers, recordProfileView as recordProfileViewApi } from './api/profileViews';
+import { followUser, unfollowUser } from './api/connections';
 import {
   MY_PROFILE,
   SAMPLE_PROFILES,
@@ -65,6 +66,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   useEffect(() => { blockedRef.current = blockedIds; }, [blockedIds]);
   const savedSearchesRef = useRef(savedSearches);
   useEffect(() => { savedSearchesRef.current = savedSearches; }, [savedSearches]);
+  const myProfileRef = useRef(myProfile);
+  useEffect(() => { myProfileRef.current = myProfile; }, [myProfile]);
 
   useEffect(() => {
     if (session?.user) {
@@ -340,18 +343,22 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     }
   }, []);
 
-  const toggleConnection = useCallback((userId: string) => {
-    setMyProfile(prev => {
-      const isConnected = prev.connections.includes(userId);
-      const updated = {
-        ...prev,
-        connections: isConnected
-          ? prev.connections.filter(id => id !== userId)
-          : [...prev.connections, userId],
-      };
+  const toggleConnection = useCallback(async (userId: string) => {
+    const uid = sessionRef.current?.user?.id;
+    if (uid === userId) return; // can't follow yourself
+    const wasConnected = myProfileRef.current.connections.includes(userId);
+    const apply = (connected: boolean) => setMyProfile(prev => {
+      const connections = connected
+        ? (prev.connections.includes(userId) ? prev.connections : [...prev.connections, userId])
+        : prev.connections.filter(id => id !== userId);
+      const updated = { ...prev, connections };
       saveProfile(updated);
       return updated;
     });
+    apply(!wasConnected); // optimistic
+    if (!uid) return;
+    const ok = wasConnected ? await unfollowUser(uid, userId) : await followUser(uid, userId);
+    if (!ok) apply(wasConnected); // revert
   }, []);
 
   const toggleBookmark = useCallback(async (castingCallId: string) => {

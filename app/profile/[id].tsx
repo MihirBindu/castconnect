@@ -284,7 +284,7 @@ export default function ProfileDetail() {
 
   const handleConnect = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    toggleConnection(profile.id);
+    void toggleConnection(profile.id);
   };
 
   const isOwn = profile.id === myProfile.id;
