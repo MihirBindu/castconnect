@@ -391,6 +391,7 @@ export interface Message {
   content: string;
   timestamp: string;
   read: boolean;
+  status?: 'sending' | 'sent' | 'failed';
 }
 
 export interface Conversation {

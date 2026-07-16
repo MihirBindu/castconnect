@@ -8,7 +8,7 @@ import { createLogger } from './logger';
 import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole } from './types';
 import { getProfile, getProfiles } from './api/profiles';
 import { getCastingCalls } from './api/castingCalls';
-import { getConversations, getMessages as fetchMessages } from './api/messages';
+import { getConversations, getMessages as fetchMessages, sendMessage as sendMessageApi, markMessagesRead } from './api/messages';
 import { getMyApplications, applyToCastingCall, withdrawApplication as withdrawApplicationApi } from './api/applications';
 import {
   MY_PROFILE,
@@ -46,6 +46,9 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   // Stable ref so retryLoad callback doesn't go stale
   const sessionRef = useRef<Session | null>(session);
   useEffect(() => { sessionRef.current = session; }, [session]);
+  // Latest messages, readable inside callbacks without stale closures.
+  const messagesRef = useRef(messages);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   useEffect(() => {
     if (session?.user) {
@@ -217,33 +220,86 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     return { ok: true };
   }, []);
 
-  const sendMessage = useCallback((conversationId: string, content: string) => {
-    const newMsg: Message = {
-      id: Crypto.randomUUID(),
-      senderId: 'me',
-      receiverId: conversations.find(c => c.id === conversationId)?.participantId || '',
-      content,
-      timestamp: new Date().toISOString(),
-      read: true,
-    };
+  // Strip any markup so message content is never rendered as HTML, and cap length.
+  const sanitizeMessage = (content: string) => content.replace(/<[^>]*>/g, '').trim().slice(0, 1000);
 
+  const putMessage = useCallback((conversationId: string, msg: Message) => {
     setMessages(prev => {
-      const convMessages = prev[conversationId] || [];
-      const updated = { ...prev, [conversationId]: [...convMessages, newMsg] };
+      const list = prev[conversationId] || [];
+      const idx = list.findIndex(m => m.id === msg.id);
+      const nextList = idx === -1 ? [...list, msg] : list.map(m => (m.id === msg.id ? msg : m));
+      const updated = { ...prev, [conversationId]: nextList };
       saveMessages(updated);
       return updated;
     });
+  }, []);
 
+  const patchMessage = useCallback((conversationId: string, messageId: string, patch: Partial<Message>) => {
+    setMessages(prev => {
+      const list = prev[conversationId] || [];
+      const updated = { ...prev, [conversationId]: list.map(m => (m.id === messageId ? { ...m, ...patch } : m)) };
+      saveMessages(updated);
+      return updated;
+    });
+  }, []);
+
+  const setConversationPreview = useCallback((conversationId: string, content: string, timestamp: string) => {
     setConversations(prev => {
-      const updated = prev.map(c =>
-        c.id === conversationId
-          ? { ...c, lastMessage: content, lastMessageTime: newMsg.timestamp }
-          : c
-      );
+      const updated = prev.map(c => (c.id === conversationId ? { ...c, lastMessage: content, lastMessageTime: timestamp } : c));
       saveConversations(updated);
       return updated;
     });
-  }, [conversations]);
+  }, []);
+
+  // Persist a message (client id makes retries idempotent) and reconcile status.
+  const deliverMessage = useCallback(async (conversationId: string, clientId: string, content: string, myId: string) => {
+    const res = await sendMessageApi(myId, conversationId, content, clientId);
+    patchMessage(conversationId, clientId, res.ok ? { status: 'sent', timestamp: res.message.timestamp } : { status: 'failed' });
+  }, [patchMessage]);
+
+  const sendMessage = useCallback(async (conversationId: string, content: string) => {
+    const clean = sanitizeMessage(content);
+    if (!clean) return;
+    const uid = sessionRef.current?.user?.id;
+    const myId = uid ?? 'me';
+    const clientId = Crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    const msg: Message = { id: clientId, senderId: myId, receiverId: conversationId, content: clean, timestamp, read: false, status: uid ? 'sending' : 'sent' };
+    putMessage(conversationId, msg);
+    setConversationPreview(conversationId, clean, timestamp);
+    if (uid) await deliverMessage(conversationId, clientId, clean, uid);
+  }, [putMessage, setConversationPreview, deliverMessage]);
+
+  const resendMessage = useCallback(async (conversationId: string, messageId: string) => {
+    const uid = sessionRef.current?.user?.id;
+    if (!uid) return;
+    const content = (messagesRef.current[conversationId] || []).find(m => m.id === messageId)?.content;
+    if (!content) return;
+    patchMessage(conversationId, messageId, { status: 'sending' });
+    await deliverMessage(conversationId, messageId, content, uid);
+  }, [patchMessage, deliverMessage]);
+
+  const loadConversation = useCallback(async (conversationId: string) => {
+    const uid = sessionRef.current?.user?.id;
+    if (!uid) return;
+    try {
+      const serverMsgs = await fetchMessages(uid, conversationId);
+      setMessages(prev => {
+        // Keep locally pending/failed messages that aren't on the server yet.
+        const serverIds = new Set(serverMsgs.map(m => m.id));
+        const pending = (prev[conversationId] || []).filter(
+          m => (m.status === 'sending' || m.status === 'failed') && !serverIds.has(m.id),
+        );
+        const updated = { ...prev, [conversationId]: [...serverMsgs, ...pending] };
+        saveMessages(updated);
+        return updated;
+      });
+      markMessagesRead(uid, conversationId).catch(() => {});
+      setConversations(prev => prev.map(c => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    } catch (err: unknown) {
+      log.warn('loadConversation failed', { message: err instanceof Error ? err.message : String(err) });
+    }
+  }, []);
 
   const toggleConnection = useCallback((userId: string) => {
     setMyProfile(prev => {
@@ -314,6 +370,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     addApplication,
     withdrawApplication,
     sendMessage,
+    resendMessage,
+    loadConversation,
     toggleConnection,
     addToCrewBasket,
     removeFromCrewBasket,
@@ -321,7 +379,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setCrewProjectName,
     isInCrewBasket,
     signOut,
-  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, isOffline, loadError, retryLoad, updateProfile, addApplication, withdrawApplication, sendMessage, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
+  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, isOffline, loadError, retryLoad, updateProfile, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>

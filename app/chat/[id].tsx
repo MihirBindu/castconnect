@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,11 +29,33 @@ function makeBubbleStyles(C: ThemeColors) {
     bubbleRowMe: {
       justifyContent: 'flex-end',
     },
-    bubble: {
+    bubbleCol: {
       maxWidth: '78%',
+    },
+    bubble: {
+      maxWidth: '100%',
       paddingHorizontal: 14,
       paddingVertical: 10,
       borderRadius: 18,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-end',
+      gap: 4,
+      marginTop: 4,
+    },
+    failedRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 3,
+      paddingHorizontal: 4,
+    },
+    failedText: {
+      fontSize: 11,
+      color: C.accentRed,
+      fontFamily: 'DMSans_500Medium',
     },
     bubbleMe: {
       backgroundColor: C.primary,
@@ -175,21 +197,45 @@ function makeStyles(C: ThemeColors) {
   });
 }
 
-function MessageBubble({ message, isMe }: { message: Message; isMe: boolean }) {
+function MessageBubble({ message, isMe, onResend }: { message: Message; isMe: boolean; onResend?: () => void }) {
   const C = useColors();
   const bStyles = useMemo(() => makeBubbleStyles(C), [C]);
   const time = new Date(message.timestamp).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
+  const failed = message.status === 'failed';
+  const sending = message.status === 'sending';
 
   return (
     <View style={[bStyles.bubbleRow, isMe && bStyles.bubbleRowMe]}>
-      <View style={[bStyles.bubble, isMe ? bStyles.bubbleMe : bStyles.bubbleOther]}>
-        <Text style={[bStyles.bubbleText, isMe && bStyles.bubbleTextMe]}>
-          {message.content}
-        </Text>
-        <Text style={[bStyles.bubbleTime, isMe && bStyles.bubbleTimeMe]}>{time}</Text>
+      <View style={[bStyles.bubbleCol, isMe && { alignItems: 'flex-end' }]}>
+        <Pressable
+          disabled={!failed}
+          onPress={onResend}
+          style={[bStyles.bubble, isMe ? bStyles.bubbleMe : bStyles.bubbleOther]}
+        >
+          <Text style={[bStyles.bubbleText, isMe && bStyles.bubbleTextMe]}>
+            {message.content}
+          </Text>
+          <View style={bStyles.metaRow}>
+            <Text style={[bStyles.bubbleTime, isMe && bStyles.bubbleTimeMe]}>{time}</Text>
+            {isMe && sending && <Ionicons name="time-outline" size={12} color="rgba(0,0,0,0.5)" />}
+            {isMe && message.status === 'sent' && <Ionicons name="checkmark" size={13} color="rgba(0,0,0,0.5)" />}
+            {isMe && !message.status && message.read && <Ionicons name="checkmark-done" size={14} color="rgba(0,0,0,0.65)" />}
+          </View>
+        </Pressable>
+        {failed && (
+          <Pressable
+            onPress={onResend}
+            style={bStyles.failedRow}
+            accessibilityRole="button"
+            accessibilityLabel="Message failed to send, tap to retry"
+          >
+            <Ionicons name="alert-circle" size={13} color={C.accentRed} />
+            <Text style={bStyles.failedText}>Failed — tap to retry</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -200,10 +246,16 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { conversations, messages, sendMessage } = useAppState();
+  const { conversations, messages, sendMessage, resendMessage, loadConversation, session } = useAppState();
   const [inputText, setInputText] = useState('');
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
+  const myId = session?.user?.id ?? 'me';
+
+  // Load real messages + mark them read when the conversation opens.
+  useEffect(() => {
+    if (id) void loadConversation(id);
+  }, [id, loadConversation]);
 
   const conversation = conversations.find(c => c.id === id);
   const chatMessages = messages[id || ''] || [];
@@ -213,7 +265,7 @@ export default function ChatScreen() {
   const handleSend = () => {
     if (!inputText.trim() || !id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    sendMessage(id, inputText.trim());
+    void sendMessage(id, inputText.trim());
     setInputText('');
   };
 
@@ -256,7 +308,11 @@ export default function ChatScreen() {
           inverted
           keyExtractor={item => item.id}
           renderItem={({ item }) => (
-            <MessageBubble message={item} isMe={item.senderId === 'me'} />
+            <MessageBubble
+              message={item}
+              isMe={item.senderId === myId}
+              onResend={() => { if (id) void resendMessage(id, item.id); }}
+            />
           )}
           contentContainerStyle={styles.messageList}
           showsVerticalScrollIndicator={false}

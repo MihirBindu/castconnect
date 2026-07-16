@@ -23,7 +23,9 @@ export interface AppState {
   updateProfile: (updates: Partial<UserProfile>) => void;
   addApplication: (castingCallId: string, castingCallTitle: string) => Promise<ApplyOutcome>;
   withdrawApplication: (castingCallId: string) => Promise<{ ok: boolean; message?: string }>;
-  sendMessage: (conversationId: string, content: string) => void;
+  sendMessage: (conversationId: string, content: string) => Promise<void>;
+  resendMessage: (conversationId: string, messageId: string) => Promise<void>;
+  loadConversation: (conversationId: string) => Promise<void>;
   toggleConnection: (userId: string) => void;
   addToCrewBasket: (profileId: string, role: CrewRole) => void;
   removeFromCrewBasket: (profileId: string) => void;
