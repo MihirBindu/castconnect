@@ -25,7 +25,7 @@ import { INDUSTRY_LABELS } from '@/lib/mock-data';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 
-type ViewMode = 'browse' | 'applied';
+type ViewMode = 'browse' | 'applied' | 'saved';
 
 const INDUSTRY_FILTERS = [
   { key: 'all', label: 'All' },
@@ -214,7 +214,8 @@ export default function JobsScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { castingCalls, applications, isLoading, loadError, retryLoad } = useAppState();
+  const { castingCalls, applications, bookmarks, isLoading, loadError, retryLoad } = useAppState();
+  const savedCalls = useMemo(() => castingCalls.filter(c => bookmarks.includes(c.id)), [castingCalls, bookmarks]);
   const [viewMode, setViewMode] = useState<ViewMode>('browse');
   const [industryFilter, setIndustryFilter] = useState('all');
   const [browseSearch, setBrowseSearch] = useState('');
@@ -280,7 +281,23 @@ export default function JobsScreen() {
             color={viewMode === 'applied' ? C.primary : C.textTertiary}
           />
           <Text style={[styles.tabText, viewMode === 'applied' && styles.tabTextActive]}>
-            My Applications
+            Applied
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setViewMode('saved');
+          }}
+          style={[styles.tab, viewMode === 'saved' && styles.tabActive]}
+        >
+          <Ionicons
+            name="bookmark-outline"
+            size={18}
+            color={viewMode === 'saved' ? C.primary : C.textTertiary}
+          />
+          <Text style={[styles.tabText, viewMode === 'saved' && styles.tabTextActive]}>
+            Saved
           </Text>
         </Pressable>
       </View>
@@ -370,7 +387,7 @@ export default function JobsScreen() {
             )
           }
         />
-      ) : (
+      ) : viewMode === 'applied' ? (
         <FlatList
           style={{ flex: 1 }}
           data={applications}
@@ -410,6 +427,29 @@ export default function JobsScreen() {
               <EmptyState tone="error" icon="alert-circle-outline" title="Couldn't load applications" message={loadError} actionLabel="Retry" onAction={retryLoad} />
             ) : (
               <EmptyState icon="document-outline" title="No applications yet" message="Start applying to casting calls" />
+            )
+          }
+        />
+      ) : (
+        <FlatList
+          style={{ flex: 1 }}
+          data={savedCalls}
+          renderItem={renderCallItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: Platform.OS === 'web' ? 34 + 84 : 100 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={true}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={retryLoad} tintColor={C.primary} colors={[C.primary]} />
+          }
+          ListEmptyComponent={
+            isLoading ? (
+              <SkeletonList count={4} />
+            ) : (
+              <EmptyState icon="bookmark-outline" title="No saved calls" message="Tap the bookmark on a casting call to save it here." />
             )
           }
         />

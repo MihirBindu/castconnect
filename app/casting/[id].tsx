@@ -263,7 +263,7 @@ export default function CastingCallDetail() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { castingCalls, applications, addApplication, withdrawApplication } = useAppState();
+  const { castingCalls, applications, addApplication, withdrawApplication, isBookmarked, toggleBookmark } = useAppState();
   const [applying, setApplying] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
@@ -344,7 +344,14 @@ export default function CastingCallDetail() {
           <Ionicons name="chevron-back" size={24} color={C.text} />
         </Pressable>
         <Text style={styles.topBarTitle} numberOfLines={1}>Casting Call</Text>
-        <View style={{ width: 40 }} />
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); void toggleBookmark(call.id); }}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel={isBookmarked(call.id) ? 'Remove from saved' : 'Save casting call'}
+        >
+          <Ionicons name={isBookmarked(call.id) ? 'bookmark' : 'bookmark-outline'} size={22} color={isBookmarked(call.id) ? C.primary : C.text} />
+        </Pressable>
       </View>
 
       <ScrollView

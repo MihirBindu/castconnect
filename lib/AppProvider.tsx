@@ -10,6 +10,7 @@ import { getProfile, getProfiles, updateProfile as updateProfileApi } from './ap
 import { getCastingCalls } from './api/castingCalls';
 import { getConversations, getMessages as fetchMessages, sendMessage as sendMessageApi, markMessagesRead } from './api/messages';
 import { getMyApplications, applyToCastingCall, withdrawApplication as withdrawApplicationApi } from './api/applications';
+import { getBookmarks, addBookmark, removeBookmark } from './api/bookmarks';
 import {
   MY_PROFILE,
   SAMPLE_PROFILES,
@@ -39,6 +40,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   const [applications, setApplications] = useState<Application[]>(SAMPLE_APPLICATIONS);
   const [crewBasket, setCrewBasket] = useState<CrewBasketItem[]>([]);
   const [crewProjectName, setCrewProjectNameState] = useState('My Production');
+  const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -49,6 +51,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   // Latest messages, readable inside callbacks without stale closures.
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+  const bookmarksRef = useRef(bookmarks);
+  useEffect(() => { bookmarksRef.current = bookmarks; }, [bookmarks]);
 
   useEffect(() => {
     if (session?.user) {
@@ -64,12 +68,13 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setLoadError(null);
     setIsOffline(false);
     try {
-      const [profile, allProfiles, calls, convs, apps] = await Promise.all([
+      const [profile, allProfiles, calls, convs, apps, bmarks] = await Promise.all([
         getProfile(userId),
         getProfiles(),
         getCastingCalls(),
         getConversations(userId),
         getMyApplications(userId),
+        getBookmarks(userId),
       ]);
 
       if (profile) {
@@ -81,6 +86,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
       if (calls.length) setCastingCalls(calls);
       if (convs.length) setConversations(convs);
       if (apps.length) setApplications(apps);
+      setBookmarks(bmarks);
 
       log.info('loadFromSupabase complete', {
         profiles: allProfiles.length,
@@ -328,6 +334,21 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     });
   }, []);
 
+  const toggleBookmark = useCallback(async (castingCallId: string) => {
+    const uid = sessionRef.current?.user?.id;
+    const wasBookmarked = bookmarksRef.current.includes(castingCallId);
+    // Optimistic toggle.
+    setBookmarks(prev => (wasBookmarked ? prev.filter(id => id !== castingCallId) : [...prev, castingCallId]));
+    if (!uid) return;
+    const ok = wasBookmarked ? await removeBookmark(uid, castingCallId) : await addBookmark(uid, castingCallId);
+    if (!ok) {
+      // Revert on failure.
+      setBookmarks(prev => (wasBookmarked ? [...prev, castingCallId] : prev.filter(id => id !== castingCallId)));
+    }
+  }, []);
+
+  const isBookmarked = useCallback((castingCallId: string) => bookmarks.includes(castingCallId), [bookmarks]);
+
   const addToCrewBasket = useCallback((profileId: string, role: CrewRole) => {
     // Can't shortlist yourself (profiles.id === auth user id).
     if (sessionRef.current?.user?.id === profileId) return;
@@ -375,12 +396,15 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     applications,
     crewBasket,
     crewProjectName,
+    bookmarks,
     isLoading,
     isOffline,
     loadError,
     retryLoad,
     updateProfile,
     persistProfile,
+    toggleBookmark,
+    isBookmarked,
     addApplication,
     withdrawApplication,
     sendMessage,
@@ -393,7 +417,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setCrewProjectName,
     isInCrewBasket,
     signOut,
-  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, isOffline, loadError, retryLoad, updateProfile, persistProfile, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
+  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, bookmarks, isLoading, isOffline, loadError, retryLoad, updateProfile, persistProfile, toggleBookmark, isBookmarked, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>

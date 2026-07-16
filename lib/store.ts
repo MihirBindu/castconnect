@@ -16,6 +16,7 @@ export interface AppState {
   applications: Application[];
   crewBasket: CrewBasketItem[];
   crewProjectName: string;
+  bookmarks: string[];
   isLoading: boolean;
   isOffline: boolean;
   loadError: string | null;
@@ -28,6 +29,8 @@ export interface AppState {
   resendMessage: (conversationId: string, messageId: string) => Promise<void>;
   loadConversation: (conversationId: string) => Promise<void>;
   toggleConnection: (userId: string) => void;
+  toggleBookmark: (castingCallId: string) => Promise<void>;
+  isBookmarked: (castingCallId: string) => boolean;
   addToCrewBasket: (profileId: string, role: CrewRole) => void;
   removeFromCrewBasket: (profileId: string) => void;
   clearCrewBasket: () => void;
