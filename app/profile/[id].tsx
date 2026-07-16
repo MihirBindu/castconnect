@@ -7,6 +7,7 @@ import {
   Pressable,
   Linking,
   Platform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -254,7 +255,7 @@ export default function ProfileDetail() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { profiles, myProfile, conversations, toggleConnection } = useAppState();
+  const { profiles, myProfile, conversations, toggleConnection, isBlocked, blockUser, unblockUser, reportUser } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
@@ -281,6 +282,45 @@ export default function ProfileDetail() {
     toggleConnection(profile.id);
   };
 
+  const isOwn = profile.id === myProfile.id;
+  const blocked = isBlocked(profile.id);
+
+  const submitReport = async (reason: string) => {
+    const ok = await reportUser(profile.id, reason);
+    Alert.alert(
+      ok ? 'Report submitted' : 'Could not submit',
+      ok ? 'Thanks — our team will review it.' : 'Please try again.',
+    );
+  };
+
+  const handleReport = () => {
+    Alert.alert('Report this profile', 'Why are you reporting it?', [
+      { text: 'Spam or scam', onPress: () => submitReport('spam') },
+      { text: 'Inappropriate content', onPress: () => submitReport('inappropriate') },
+      { text: 'Harassment', onPress: () => submitReport('harassment') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handleBlockToggle = () => {
+    if (blocked) {
+      void unblockUser(profile.id);
+      return;
+    }
+    Alert.alert('Block this user?', 'They won’t be able to message you, and you won’t see each other in messages.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Block', style: 'destructive', onPress: () => { void blockUser(profile.id); router.back(); } },
+    ]);
+  };
+
+  const openMenu = () => {
+    Alert.alert(profile.name, undefined, [
+      { text: blocked ? 'Unblock' : 'Block', style: blocked ? 'default' : 'destructive', onPress: handleBlockToggle },
+      { text: 'Report', onPress: handleReport },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
       <View style={styles.topBar}>
@@ -288,7 +328,13 @@ export default function ProfileDetail() {
           <Ionicons name="chevron-back" size={24} color={C.text} />
         </Pressable>
         <Text style={styles.topBarTitle}>Profile</Text>
-        <View style={{ width: 40 }} />
+        {isOwn ? (
+          <View style={{ width: 40 }} />
+        ) : (
+          <Pressable onPress={openMenu} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="More options">
+            <Ionicons name="ellipsis-horizontal" size={22} color={C.text} />
+          </Pressable>
+        )}
       </View>
 
       <ScrollView
@@ -333,7 +379,17 @@ export default function ProfileDetail() {
           </View>
         </LinearGradient>
 
-        {profile.id !== myProfile.id && (
+        {!isOwn && (blocked ? (
+          <View style={styles.actions}>
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); void unblockUser(profile.id); }}
+              style={({ pressed }) => [styles.connectBtn, pressed && { opacity: 0.75 }]}
+            >
+              <Ionicons name="ban-outline" size={18} color={C.black} />
+              <Text style={styles.connectBtnText}>Unblock</Text>
+            </Pressable>
+          </View>
+        ) : (
           <View style={styles.actions}>
             <Pressable
               onPress={handleConnect}
@@ -366,7 +422,7 @@ export default function ProfileDetail() {
               <Text style={styles.messageBtnText}>Message</Text>
             </Pressable>
           </View>
-        )}
+        ))}
 
         <View style={styles.content}>
           <View style={styles.section}>

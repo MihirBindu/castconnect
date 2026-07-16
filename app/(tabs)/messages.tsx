@@ -73,13 +73,13 @@ export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { conversations, isLoading, loadError, retryLoad } = useAppState();
+  const { conversations, isLoading, loadError, retryLoad, blockedIds } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
-  const sortedConversations = [...conversations].sort(
-    (a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime()
-  );
+  const sortedConversations = [...conversations]
+    .filter(c => !blockedIds.includes(c.participantId))
+    .sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 

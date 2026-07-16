@@ -19,6 +19,7 @@ export interface AppState {
   bookmarks: string[];
   notifications: AppNotification[];
   unreadNotifications: number;
+  blockedIds: string[];
   isLoading: boolean;
   isOffline: boolean;
   loadError: string | null;
@@ -34,6 +35,10 @@ export interface AppState {
   toggleBookmark: (castingCallId: string) => Promise<void>;
   isBookmarked: (castingCallId: string) => boolean;
   markNotificationsRead: () => Promise<void>;
+  blockUser: (userId: string) => Promise<void>;
+  unblockUser: (userId: string) => Promise<void>;
+  isBlocked: (userId: string) => boolean;
+  reportUser: (userId: string, reason: string, details?: string) => Promise<boolean>;
   addToCrewBasket: (profileId: string, role: CrewRole) => void;
   removeFromCrewBasket: (profileId: string) => void;
   clearCrewBasket: () => void;

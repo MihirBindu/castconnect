@@ -477,7 +477,7 @@ export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { profiles, crewBasket, addToCrewBasket, isInCrewBasket, isLoading, loadError, retryLoad } = useAppState();
+  const { profiles, crewBasket, addToCrewBasket, isInCrewBasket, isLoading, loadError, retryLoad, blockedIds } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<CrewRole[]>([]);
   const [experienceFilter, setExperienceFilter] = useState<ExperienceFilter>('all');
@@ -512,7 +512,7 @@ export default function DiscoverScreen() {
   }, []);
 
   const filteredProfiles = useMemo(() => {
-    let results = profiles;
+    let results = blockedIds.length ? profiles.filter(p => !blockedIds.includes(p.id)) : profiles;
 
     if (selectedRoles.length > 0) {
       results = results.filter(p => selectedRoles.includes(p.crewRole));
@@ -561,7 +561,7 @@ export default function DiscoverScreen() {
     });
 
     return results;
-  }, [profiles, searchQuery, selectedRoles, experienceFilter, locationFilter, availFilter, sortBy]);
+  }, [profiles, blockedIds, searchQuery, selectedRoles, experienceFilter, locationFilter, availFilter, sortBy]);
 
   const groupedByRole = useMemo(() => {
     if (selectedRoles.length === 0) return null;
