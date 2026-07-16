@@ -71,6 +71,7 @@ function RootLayoutNav() {
         <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="crew-basket" options={{ headerShown: false }} />
         <Stack.Screen name="crew-review" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
       </Stack>
     </>
   );
