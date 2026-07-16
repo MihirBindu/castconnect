@@ -66,13 +66,11 @@ npm install
 2. Click **New project**, give it a name (e.g. `castconnect`), and choose a region
 3. Wait for provisioning (~1 minute)
 
-#### b. Run the database schema
+#### b. Set up the database schema
 
-1. In your Supabase project, open **SQL Editor** → **New query**
-2. Copy the contents of [`supabase/schema.sql`](supabase/schema.sql) and paste it in
-3. Click **Run** — this creates all tables, RLS policies, triggers, the onboarding/portfolio columns, and the two Storage buckets (`portfolio-media`, `portfolio-docs`)
+**Fresh project (quickest):** open **SQL Editor → New query**, paste the contents of [`supabase/schema.sql`](supabase/schema.sql), and **Run**. This creates every table, RLS policy, trigger, the onboarding/portfolio columns, and the two Storage buckets (`portfolio-media`, `portfolio-docs`).
 
-> **Existing database?** Instead of re-running the full schema, apply the incremental files in [`supabase/migrations/`](supabase/migrations) in order (`0001` → `0005`). Each is idempotent and safe to re-run.
+**Or use the migration CLI (recommended going forward)** — apply and create migrations from the terminal instead of the SQL editor. See [Database migrations](#database-migrations) below.
 
 #### c. Get your API keys
 
@@ -221,12 +219,40 @@ Both use owner-scoped RLS on `storage.objects` — a user can only write/delete 
 
 ---
 
+## Database migrations
+
+Schema changes live as ordered SQL files in [`supabase/migrations/`](supabase/migrations) (`0001_…` → `0011_…`) and are applied to the linked Supabase project from the **terminal** with the [Supabase CLI](https://supabase.com/docs/guides/cli) — no more pasting into the SQL editor. The CLI is invoked via `npx` (no global install needed); [`supabase/config.toml`](supabase/config.toml) pins the project.
+
+**One-time setup** (per machine):
+
+```bash
+npx supabase login                                  # opens a browser; needs your Supabase access token
+npx supabase link --project-ref odjuakgpungtkfisxrjh   # prompts for the database password
+```
+
+**Everyday commands:**
+
+| Command | What it does |
+|---|---|
+| `npm run db:migrate` | Apply any pending migrations to the linked project (`supabase db push`) |
+| `npm run db:migrate:new -- <name>` | Scaffold a new migration file, e.g. `npm run db:migrate:new -- add_reviews` |
+| `npm run db:migrate:list` | Show which migrations are applied locally vs. remotely |
+
+**Workflow:** create a migration → write the SQL in the new file under `supabase/migrations/` → `npm run db:migrate`. Keep migrations **idempotent** (`create … if not exists`, `create or replace`, `drop policy if exists` + `create policy`) so they're safe to re-run.
+
+> The existing `0001`–`0011` are already recorded as applied in the remote migration history, so the first `db:migrate` is a clean no-op — only new files run.
+
+---
+
 ## Available Scripts
 
 | Script | Description |
 |---|---|
 | `npm run expo:dev` | Start Expo development server |
 | `npm run server:dev` | Start Express backend (development) |
+| `npm run db:migrate` | Apply pending Supabase migrations (terminal) |
+| `npm run db:migrate:new -- <name>` | Create a new Supabase migration file |
+| `npm run db:migrate:list` | List local vs. remote migration status |
 | `npm run db:push` | Push Drizzle schema to the database |
 | `npm run lint` | Run ESLint |
 | `npm run expo:static:build` | Build static web export |
