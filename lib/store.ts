@@ -33,7 +33,7 @@ export interface AppState {
   sendMessage: (conversationId: string, content: string) => Promise<void>;
   resendMessage: (conversationId: string, messageId: string) => Promise<void>;
   loadConversation: (conversationId: string) => Promise<void>;
-  toggleConnection: (userId: string) => void;
+  toggleConnection: (userId: string) => Promise<void>;
   toggleBookmark: (castingCallId: string) => Promise<void>;
   isBookmarked: (castingCallId: string) => boolean;
   markNotificationsRead: () => Promise<void>;
