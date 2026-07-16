@@ -24,7 +24,7 @@ import { SkeletonList } from '@/components/Skeleton';
 import { Avatar } from '@/components/Avatar';
 import { SkillTag } from '@/components/SkillTag';
 import { AvailabilityBadge } from '@/components/StatusBadge';
-import { UserProfile, CrewRole, AvailabilityStatus } from '@/lib/types';
+import { UserProfile, CrewRole, AvailabilityStatus, DiscoverFilters } from '@/lib/types';
 import { ALL_CREW_ROLES } from '@/lib/mock-data';
 import * as Haptics from 'expo-haptics';
 
@@ -187,6 +187,35 @@ function makeStyles(C: ThemeColors) {
       paddingBottom: 4,
       gap: 8,
     },
+    savedRow: {
+      paddingVertical: 8,
+    },
+    saveSearchPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: C.primary,
+    },
+    saveSearchText: { fontSize: 12, color: C.primary, fontFamily: 'DMSans_600SemiBold' },
+    savedChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingLeft: 12,
+      paddingRight: 8,
+      paddingVertical: 7,
+      borderRadius: 16,
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.border,
+      maxWidth: 220,
+    },
+    savedChipBody: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 },
+    savedChipText: { fontSize: 12, color: C.textSecondary, fontFamily: 'DMSans_500Medium', flexShrink: 1 },
     resultCount: {
       fontSize: 12,
       color: C.textTertiary,
@@ -477,7 +506,7 @@ export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { profiles, crewBasket, addToCrewBasket, isInCrewBasket, isLoading, loadError, retryLoad, blockedIds } = useAppState();
+  const { profiles, crewBasket, addToCrewBasket, isInCrewBasket, isLoading, loadError, retryLoad, blockedIds, savedSearches, saveSearch, deleteSavedSearch } = useAppState();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<CrewRole[]>([]);
   const [experienceFilter, setExperienceFilter] = useState<ExperienceFilter>('all');
@@ -503,6 +532,32 @@ export default function DiscoverScreen() {
     setLocationFilter('All Locations');
     setAvailFilter('all');
   }, []);
+
+  const currentFilters: DiscoverFilters = { searchQuery, selectedRoles, experienceFilter, locationFilter, availFilter, sortBy };
+
+  const applyFilters = useCallback((f: DiscoverFilters) => {
+    Haptics.selectionAsync();
+    setSearchQuery(f.searchQuery ?? '');
+    setSelectedRoles((f.selectedRoles ?? []) as CrewRole[]);
+    setExperienceFilter((f.experienceFilter ?? 'all') as ExperienceFilter);
+    setLocationFilter(f.locationFilter ?? 'All Locations');
+    setAvailFilter((f.availFilter ?? 'all') as AvailFilter);
+    setSortBy((f.sortBy ?? 'rating') as SortOption);
+  }, []);
+
+  const summarize = (f: DiscoverFilters): string => {
+    const parts: string[] = [];
+    if (f.selectedRoles.length) parts.push(f.selectedRoles.slice(0, 2).join(', ') + (f.selectedRoles.length > 2 ? '…' : ''));
+    if (f.searchQuery.trim()) parts.push(`"${f.searchQuery.trim()}"`);
+    if (f.locationFilter !== 'All Locations') parts.push(f.locationFilter);
+    if (f.availFilter !== 'all') parts.push(f.availFilter);
+    return parts.join(' · ') || 'All professionals';
+  };
+
+  const handleSaveSearch = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void saveSearch(summarize(currentFilters), currentFilters);
+  };
 
   const toggleRole = useCallback((role: CrewRole) => {
     Haptics.selectionAsync();
@@ -796,6 +851,29 @@ export default function DiscoverScreen() {
         </ScrollView>
       </View>
 
+      {(filtersActive || savedSearches.length > 0) && (
+        <View style={styles.savedRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
+            {filtersActive && (
+              <Pressable onPress={handleSaveSearch} style={styles.saveSearchPill} accessibilityRole="button" accessibilityLabel="Save this search">
+                <Ionicons name="bookmark-outline" size={13} color={C.primary} />
+                <Text style={styles.saveSearchText}>Save search</Text>
+              </Pressable>
+            )}
+            {savedSearches.map(s => (
+              <View key={s.id} style={styles.savedChip}>
+                <Pressable onPress={() => applyFilters(s.filters)} style={styles.savedChipBody} accessibilityRole="button" accessibilityLabel={`Apply saved search: ${s.name}`}>
+                  <Ionicons name="bookmark" size={12} color={C.textSecondary} />
+                  <Text style={styles.savedChipText} numberOfLines={1}>{s.name}</Text>
+                </Pressable>
+                <Pressable onPress={() => deleteSavedSearch(s.id)} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Delete saved search: ${s.name}`}>
+                  <Ionicons name="close" size={13} color={C.textTertiary} />
+                </Pressable>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       <OfflineBanner />
 

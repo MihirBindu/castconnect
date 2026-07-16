@@ -550,6 +550,26 @@ create trigger trg_check_message_not_blocked before insert on public.messages
   for each row execute function public.check_message_not_blocked();
 
 -- ────────────────────────────────────────────────────────────
+-- SAVED SEARCHES (Discover filter presets) — see migrations/0010_saved_searches.sql
+-- ────────────────────────────────────────────────────────────
+create table if not exists public.saved_searches (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  name       text not null default '',
+  filters    jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists saved_searches_user_idx on public.saved_searches (user_id, created_at desc);
+
+alter table public.saved_searches enable row level security;
+drop policy if exists "saved_searches_select" on public.saved_searches;
+drop policy if exists "saved_searches_insert" on public.saved_searches;
+drop policy if exists "saved_searches_delete" on public.saved_searches;
+create policy "saved_searches_select" on public.saved_searches for select using (auth.uid() = user_id);
+create policy "saved_searches_insert" on public.saved_searches for insert with check (auth.uid() = user_id);
+create policy "saved_searches_delete" on public.saved_searches for delete using (auth.uid() = user_id);
+
+-- ────────────────────────────────────────────────────────────
 -- STORAGE — portfolio media (see supabase/migrations/0005_portfolio.sql)
 --   portfolio-media : PUBLIC showcase images (profile photo, portfolio photos)
 --   portfolio-docs  : PRIVATE award documents (served via signed URLs)

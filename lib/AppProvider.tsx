@@ -5,7 +5,7 @@ import { Session } from '@supabase/supabase-js';
 import { AppContext, AppState, ApplyOutcome } from './store';
 import { supabase, isNetworkError, NetworkError, networkErrorMessage } from './supabase';
 import { createLogger } from './logger';
-import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole, AppNotification } from './types';
+import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole, AppNotification, SavedSearch, DiscoverFilters } from './types';
 import { getProfile, getProfiles, updateProfile as updateProfileApi } from './api/profiles';
 import { getCastingCalls } from './api/castingCalls';
 import { getConversations, getMessages as fetchMessages, sendMessage as sendMessageApi, markMessagesRead } from './api/messages';
@@ -13,6 +13,7 @@ import { getMyApplications, applyToCastingCall, withdrawApplication as withdrawA
 import { getBookmarks, addBookmark, removeBookmark } from './api/bookmarks';
 import { getNotifications, markAllNotificationsRead } from './api/notifications';
 import { getMyBlocks, blockUser as blockUserApi, unblockUser as unblockUserApi, reportUser as reportUserApi } from './api/blocks';
+import { getSavedSearches, addSavedSearch, deleteSavedSearch as deleteSavedSearchApi } from './api/savedSearches';
 import {
   MY_PROFILE,
   SAMPLE_PROFILES,
@@ -45,6 +46,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -59,6 +61,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   useEffect(() => { bookmarksRef.current = bookmarks; }, [bookmarks]);
   const blockedRef = useRef(blockedIds);
   useEffect(() => { blockedRef.current = blockedIds; }, [blockedIds]);
+  const savedSearchesRef = useRef(savedSearches);
+  useEffect(() => { savedSearchesRef.current = savedSearches; }, [savedSearches]);
 
   useEffect(() => {
     if (session?.user) {
@@ -74,7 +78,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setLoadError(null);
     setIsOffline(false);
     try {
-      const [profile, allProfiles, calls, convs, apps, bmarks, notifs, blocked] = await Promise.all([
+      const [profile, allProfiles, calls, convs, apps, bmarks, notifs, blocked, searches] = await Promise.all([
         getProfile(userId),
         getProfiles(),
         getCastingCalls(),
@@ -83,6 +87,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
         getBookmarks(userId),
         getNotifications(userId),
         getMyBlocks(userId),
+        getSavedSearches(userId),
       ]);
 
       if (profile) {
@@ -97,6 +102,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
       setBookmarks(bmarks);
       setNotifications(notifs);
       setBlockedIds(blocked);
+      setSavedSearches(searches);
 
       log.info('loadFromSupabase complete', {
         profiles: allProfiles.length,
@@ -391,6 +397,23 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     return reportUserApi(uid, userId, reason, details ?? '');
   }, []);
 
+  const saveSearch = useCallback(async (name: string, filters: DiscoverFilters) => {
+    const uid = sessionRef.current?.user?.id;
+    if (!uid) return;
+    const saved = await addSavedSearch(uid, name, filters);
+    if (saved) setSavedSearches(prev => [saved, ...prev]);
+  }, []);
+
+  const deleteSavedSearch = useCallback(async (id: string) => {
+    const uid = sessionRef.current?.user?.id;
+    const prevList = savedSearchesRef.current;
+    setSavedSearches(prev => prev.filter(s => s.id !== id));
+    if (uid) {
+      const ok = await deleteSavedSearchApi(uid, id);
+      if (!ok) setSavedSearches(prevList); // revert
+    }
+  }, []);
+
   const addToCrewBasket = useCallback((profileId: string, role: CrewRole) => {
     // Can't shortlist yourself (profiles.id === auth user id).
     if (sessionRef.current?.user?.id === profileId) return;
@@ -442,6 +465,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     notifications,
     unreadNotifications: notifications.reduce((n, x) => (x.read ? n : n + 1), 0),
     blockedIds,
+    savedSearches,
     isLoading,
     isOffline,
     loadError,
@@ -455,6 +479,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     unblockUser,
     isBlocked,
     reportUser,
+    saveSearch,
+    deleteSavedSearch,
     addApplication,
     withdrawApplication,
     sendMessage,
@@ -467,7 +493,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setCrewProjectName,
     isInCrewBasket,
     signOut,
-  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, bookmarks, notifications, blockedIds, isLoading, isOffline, loadError, retryLoad, updateProfile, persistProfile, toggleBookmark, isBookmarked, markNotificationsRead, blockUser, unblockUser, isBlocked, reportUser, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
+  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, bookmarks, notifications, blockedIds, savedSearches, isLoading, isOffline, loadError, retryLoad, updateProfile, persistProfile, toggleBookmark, isBookmarked, markNotificationsRead, blockUser, unblockUser, isBlocked, reportUser, saveSearch, deleteSavedSearch, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>

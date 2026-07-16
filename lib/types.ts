@@ -394,6 +394,22 @@ export interface Message {
   status?: 'sending' | 'sent' | 'failed';
 }
 
+export interface DiscoverFilters {
+  searchQuery: string;
+  selectedRoles: CrewRole[];
+  experienceFilter: string;
+  locationFilter: string;
+  availFilter: string;
+  sortBy: string;
+}
+
+export interface SavedSearch {
+  id: string;
+  name: string;
+  filters: DiscoverFilters;
+  createdAt: string;
+}
+
 export type NotificationType = 'message' | 'application_status' | 'follow';
 
 export interface AppNotification {

@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { Session } from '@supabase/supabase-js';
-import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole, AppNotification } from './types';
+import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole, AppNotification, SavedSearch, DiscoverFilters } from './types';
 
 export type ApplyOutcome =
   | { ok: true; alreadyApplied: boolean }
@@ -20,6 +20,7 @@ export interface AppState {
   notifications: AppNotification[];
   unreadNotifications: number;
   blockedIds: string[];
+  savedSearches: SavedSearch[];
   isLoading: boolean;
   isOffline: boolean;
   loadError: string | null;
@@ -39,6 +40,8 @@ export interface AppState {
   unblockUser: (userId: string) => Promise<void>;
   isBlocked: (userId: string) => boolean;
   reportUser: (userId: string, reason: string, details?: string) => Promise<boolean>;
+  saveSearch: (name: string, filters: DiscoverFilters) => Promise<void>;
+  deleteSavedSearch: (id: string) => Promise<void>;
   addToCrewBasket: (profileId: string, role: CrewRole) => void;
   removeFromCrewBasket: (profileId: string) => void;
   clearCrewBasket: () => void;
