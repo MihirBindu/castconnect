@@ -40,40 +40,64 @@ export async function getMessages(myId: string, otherId: string): Promise<Messag
   }
 }
 
-export async function sendMessage(senderId: string, receiverId: string, content: string): Promise<Message | null> {
+export type SendMessageResult =
+  | { ok: true; message: Message }
+  | { ok: false; retryable: boolean };
+
+/**
+ * Sends a message. When a client-generated `clientId` is supplied it becomes the
+ * row id, so a retried/double-tapped send hits the primary-key constraint
+ * (23505) and resolves to "already sent" instead of duplicating.
+ */
+export async function sendMessage(
+  senderId: string,
+  receiverId: string,
+  content: string,
+  clientId?: string,
+): Promise<SendMessageResult> {
   log.debug('sendMessage', { senderId, receiverId, contentLength: content.length });
   if (!content.trim()) {
     log.warn('sendMessage called with empty content');
-    return null;
+    return { ok: false, retryable: false };
   }
+  const now = new Date().toISOString();
   try {
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({ sender_id: senderId, receiver_id: receiverId, content: content.trim() })
-      .select()
-      .single();
+    const row: Record<string, unknown> = { sender_id: senderId, receiver_id: receiverId, content: content.trim() };
+    if (clientId) row.id = clientId;
+
+    const { data, error } = await supabase.from('messages').insert(row).select().single();
 
     if (error) {
+      // Duplicate id → this exact message already landed. Treat as sent.
+      if (error.code === '23505' && clientId) {
+        log.info('sendMessage — already sent (idempotent)', { clientId });
+        return { ok: true, message: { id: clientId, senderId, receiverId, content: content.trim(), timestamp: now, read: false, status: 'sent' } };
+      }
+      const retryable = isNetworkError({ message: error.message });
       log.error('sendMessage failed', { code: error.code, message: error.message });
-      return null;
+      return { ok: false, retryable };
     }
 
     log.info('sendMessage success', { messageId: data?.id });
     return {
-      id: data.id,
-      senderId: data.sender_id,
-      receiverId: data.receiver_id,
-      content: data.content,
-      timestamp: data.created_at,
-      read: data.read,
+      ok: true,
+      message: {
+        id: data.id,
+        senderId: data.sender_id,
+        receiverId: data.receiver_id,
+        content: data.content,
+        timestamp: data.created_at,
+        read: data.read,
+        status: 'sent',
+      },
     };
   } catch (err: unknown) {
     if (isNetworkError(err)) {
       log.warn('sendMessage: network unavailable');
-      return null;
+      return { ok: false, retryable: true };
     }
     log.error('sendMessage threw', { message: err instanceof Error ? err.message : String(err) });
-    return null;
+    return { ok: false, retryable: false };
   }
 }
 
