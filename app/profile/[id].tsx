@@ -258,7 +258,9 @@ export default function ProfileDetail() {
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
-  const profile = profiles.find(p => p.id === id);
+  // Own profile is filtered out of `profiles`; resolve it from myProfile so
+  // "preview as public" works.
+  const profile = id === myProfile.id ? myProfile : profiles.find(p => p.id === id);
   const isConnected = myProfile.connections.includes(id || '');
 
   if (!profile) {

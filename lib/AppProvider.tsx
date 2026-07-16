@@ -6,7 +6,7 @@ import { AppContext, AppState, ApplyOutcome } from './store';
 import { supabase, isNetworkError, NetworkError, networkErrorMessage } from './supabase';
 import { createLogger } from './logger';
 import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole } from './types';
-import { getProfile, getProfiles } from './api/profiles';
+import { getProfile, getProfiles, updateProfile as updateProfileApi } from './api/profiles';
 import { getCastingCalls } from './api/castingCalls';
 import { getConversations, getMessages as fetchMessages, sendMessage as sendMessageApi, markMessagesRead } from './api/messages';
 import { getMyApplications, applyToCastingCall, withdrawApplication as withdrawApplicationApi } from './api/applications';
@@ -171,6 +171,19 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
       return updated;
     });
   }, []);
+
+  // Persist profile edits to Supabase (when signed in) then sync local state, so
+  // a failed save doesn't leave a stale local value. updateProfile stays the
+  // local-only sync used by the onboarding screens after their own API writes.
+  const persistProfile = useCallback(async (updates: Partial<UserProfile>): Promise<{ ok: boolean; message?: string }> => {
+    const uid = sessionRef.current?.user?.id;
+    if (uid) {
+      const ok = await updateProfileApi(uid, updates);
+      if (!ok) return { ok: false, message: 'Could not save changes. Please check your connection and try again.' };
+    }
+    updateProfile(updates);
+    return { ok: true };
+  }, [updateProfile]);
 
   const addLocalApplication = useCallback((castingCallId: string, castingCallTitle: string, applicantId: string) => {
     setApplications(prev => {
@@ -367,6 +380,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     loadError,
     retryLoad,
     updateProfile,
+    persistProfile,
     addApplication,
     withdrawApplication,
     sendMessage,
@@ -379,7 +393,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setCrewProjectName,
     isInCrewBasket,
     signOut,
-  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, isOffline, loadError, retryLoad, updateProfile, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
+  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, isLoading, isOffline, loadError, retryLoad, updateProfile, persistProfile, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>
