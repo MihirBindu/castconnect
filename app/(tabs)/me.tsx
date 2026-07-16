@@ -186,6 +186,28 @@ function makeStyles(C: ThemeColors) {
       paddingHorizontal: 20,
       marginTop: 28,
     },
+    viewsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginHorizontal: 20,
+      marginTop: 16,
+      padding: 14,
+      borderRadius: 14,
+      backgroundColor: C.surface,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    viewsIcon: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: 'rgba(212, 168, 83, 0.12)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    viewsTitle: { fontSize: 15, fontFamily: 'DMSans_600SemiBold', color: C.text },
+    viewsSub: { fontSize: 12, fontFamily: 'DMSans_400Regular', color: C.textSecondary, marginTop: 2 },
     themeRow: {
       flexDirection: 'row',
       gap: 10,
@@ -257,7 +279,7 @@ export default function MeScreen() {
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
   const { mode, setMode } = useTheme();
-  const { myProfile, applications, conversations, isLoading, retryLoad, persistProfile } = useAppState();
+  const { myProfile, applications, conversations, isLoading, retryLoad, persistProfile, profileViewers } = useAppState();
   const [savingAvail, setSavingAvail] = useState(false);
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
@@ -358,6 +380,24 @@ export default function MeScreen() {
             </Text>
           )}
         </LinearGradient>
+
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/profile/viewers' as any); }}
+          style={({ pressed }) => [styles.viewsRow, pressed && { opacity: 0.7 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Who viewed your profile"
+        >
+          <View style={styles.viewsIcon}>
+            <Ionicons name="eye-outline" size={18} color={C.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.viewsTitle}>Profile views</Text>
+            <Text style={styles.viewsSub}>
+              {profileViewers.length} {profileViewers.length === 1 ? 'person has' : 'people have'} viewed your profile
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={C.textTertiary} />
+        </Pressable>
 
         <View style={styles.appearanceSection}>
           <Text style={styles.sectionLabel}>Appearance</Text>

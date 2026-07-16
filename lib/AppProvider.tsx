@@ -5,7 +5,7 @@ import { Session } from '@supabase/supabase-js';
 import { AppContext, AppState, ApplyOutcome } from './store';
 import { supabase, isNetworkError, NetworkError, networkErrorMessage } from './supabase';
 import { createLogger } from './logger';
-import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole, AppNotification, SavedSearch, DiscoverFilters } from './types';
+import { UserProfile, CastingCall, Conversation, Message, Application, CrewBasketItem, CrewRole, AppNotification, SavedSearch, DiscoverFilters, ProfileViewer } from './types';
 import { getProfile, getProfiles, updateProfile as updateProfileApi } from './api/profiles';
 import { getCastingCalls } from './api/castingCalls';
 import { getConversations, getMessages as fetchMessages, sendMessage as sendMessageApi, markMessagesRead } from './api/messages';
@@ -14,6 +14,7 @@ import { getBookmarks, addBookmark, removeBookmark } from './api/bookmarks';
 import { getNotifications, markAllNotificationsRead } from './api/notifications';
 import { getMyBlocks, blockUser as blockUserApi, unblockUser as unblockUserApi, reportUser as reportUserApi } from './api/blocks';
 import { getSavedSearches, addSavedSearch, deleteSavedSearch as deleteSavedSearchApi } from './api/savedSearches';
+import { getProfileViewers, recordProfileView as recordProfileViewApi } from './api/profileViews';
 import {
   MY_PROFILE,
   SAMPLE_PROFILES,
@@ -47,6 +48,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [profileViewers, setProfileViewers] = useState<ProfileViewer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setLoadError(null);
     setIsOffline(false);
     try {
-      const [profile, allProfiles, calls, convs, apps, bmarks, notifs, blocked, searches] = await Promise.all([
+      const [profile, allProfiles, calls, convs, apps, bmarks, notifs, blocked, searches, viewers] = await Promise.all([
         getProfile(userId),
         getProfiles(),
         getCastingCalls(),
@@ -88,6 +90,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
         getNotifications(userId),
         getMyBlocks(userId),
         getSavedSearches(userId),
+        getProfileViewers(userId),
       ]);
 
       if (profile) {
@@ -103,6 +106,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
       setNotifications(notifs);
       setBlockedIds(blocked);
       setSavedSearches(searches);
+      setProfileViewers(viewers);
 
       log.info('loadFromSupabase complete', {
         profiles: allProfiles.length,
@@ -414,6 +418,12 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     }
   }, []);
 
+  const recordProfileView = useCallback(async (viewedId: string) => {
+    const uid = sessionRef.current?.user?.id;
+    if (!uid || uid === viewedId) return;
+    await recordProfileViewApi(uid, viewedId);
+  }, []);
+
   const addToCrewBasket = useCallback((profileId: string, role: CrewRole) => {
     // Can't shortlist yourself (profiles.id === auth user id).
     if (sessionRef.current?.user?.id === profileId) return;
@@ -466,6 +476,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     unreadNotifications: notifications.reduce((n, x) => (x.read ? n : n + 1), 0),
     blockedIds,
     savedSearches,
+    profileViewers,
     isLoading,
     isOffline,
     loadError,
@@ -481,6 +492,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     reportUser,
     saveSearch,
     deleteSavedSearch,
+    recordProfileView,
     addApplication,
     withdrawApplication,
     sendMessage,
@@ -493,7 +505,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setCrewProjectName,
     isInCrewBasket,
     signOut,
-  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, bookmarks, notifications, blockedIds, savedSearches, isLoading, isOffline, loadError, retryLoad, updateProfile, persistProfile, toggleBookmark, isBookmarked, markNotificationsRead, blockUser, unblockUser, isBlocked, reportUser, saveSearch, deleteSavedSearch, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
+  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, bookmarks, notifications, blockedIds, savedSearches, profileViewers, isLoading, isOffline, loadError, retryLoad, updateProfile, persistProfile, toggleBookmark, isBookmarked, markNotificationsRead, blockUser, unblockUser, isBlocked, reportUser, saveSearch, deleteSavedSearch, recordProfileView, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>

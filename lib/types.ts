@@ -394,6 +394,16 @@ export interface Message {
   status?: 'sending' | 'sent' | 'failed';
 }
 
+export interface ProfileViewer {
+  viewerId: string;
+  name: string;
+  role: UserRole;
+  title: string;
+  profileImage: string | null;
+  isVerified: boolean;
+  viewedAt: string;
+}
+
 export interface DiscoverFilters {
   searchQuery: string;
   selectedRoles: CrewRole[];
