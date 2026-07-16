@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Linking,
   Platform,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ import { Avatar } from '@/components/Avatar';
 import { AvailabilityBadge } from '@/components/StatusBadge';
 import { SkillTag } from '@/components/SkillTag';
 import { OfflineBanner } from '@/components/OfflineBanner';
+import { AvailabilityStatus } from '@/lib/types';
 import { ROLE_LABELS, INDUSTRY_LABELS } from '@/lib/mock-data';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -255,9 +257,20 @@ export default function MeScreen() {
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
   const { mode, setMode } = useTheme();
-  const { myProfile, applications, conversations, isLoading, retryLoad } = useAppState();
+  const { myProfile, applications, conversations, isLoading, retryLoad, persistProfile } = useAppState();
+  const [savingAvail, setSavingAvail] = useState(false);
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
+
+  const cycleAvailability = async () => {
+    if (savingAvail) return;
+    const order: AvailabilityStatus[] = ['available', 'busy', 'not_available'];
+    const next = order[(order.indexOf(myProfile.availability) + 1) % order.length];
+    setSavingAvail(true);
+    const res = await persistProfile({ availability: next });
+    setSavingAvail(false);
+    if (!res.ok) Alert.alert('Could not update', res.message ?? 'Please try again.');
+  };
 
   const openLink = (url: string) => {
     Linking.openURL(url);
@@ -290,14 +303,28 @@ export default function MeScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push('/profile/edit' as any);
-            }}
-          >
-            <Feather name="edit-2" size={20} color={C.primary} />
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({ pathname: '/profile/[id]', params: { id: myProfile.id } });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Preview public profile"
+            >
+              <Feather name="eye" size={20} color={C.textSecondary} />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/profile/edit' as any);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit profile"
+            >
+              <Feather name="edit-2" size={20} color={C.primary} />
+            </Pressable>
+          </View>
         </View>
 
         <LinearGradient
@@ -312,7 +339,15 @@ export default function MeScreen() {
               <Ionicons name="location-outline" size={14} color={C.textSecondary} />
               <Text style={styles.metaText}>{myProfile.location}</Text>
             </View>
-            <AvailabilityBadge status={myProfile.availability} />
+            <Pressable
+              onPress={cycleAvailability}
+              disabled={savingAvail}
+              accessibilityRole="button"
+              accessibilityLabel="Change availability"
+              style={({ pressed }) => pressed && { opacity: 0.6 }}
+            >
+              <AvailabilityBadge status={myProfile.availability} />
+            </Pressable>
           </View>
           <View style={styles.roleBadge}>
             <Text style={styles.roleText}>{ROLE_LABELS[myProfile.role]}</Text>

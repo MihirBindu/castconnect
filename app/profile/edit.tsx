@@ -8,6 +8,7 @@ import {
   Pressable,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -16,6 +17,8 @@ import { useColors } from '@/lib/ThemeContext';
 import { ThemeColors } from '@/constants/colors';
 import { useAppState } from '@/lib/store';
 import { AvailabilityStatus } from '@/lib/types';
+import { validateName } from '@/lib/profileValidation';
+import { validateBio } from '@/lib/professionalValidation';
 import * as Haptics from 'expo-haptics';
 
 const AVAILABILITY_OPTIONS: { key: AvailabilityStatus; label: string; color: string }[] = [
@@ -110,10 +113,11 @@ export default function EditProfileScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { myProfile, updateProfile } = useAppState();
+  const { myProfile, persistProfile } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState(myProfile.name);
   const [title, setTitle] = useState(myProfile.title);
   const [bio, setBio] = useState(myProfile.bio);
@@ -124,13 +128,26 @@ export default function EditProfileScreen() {
   const [availability, setAvailability] = useState(myProfile.availability);
   const [skills, setSkills] = useState(myProfile.skills.join(', '));
 
-  const handleSave = () => {
-    if (!name.trim() || !title.trim()) {
-      Alert.alert('Required', 'Name and title are required.');
+  const handleSave = async () => {
+    if (saving) return;
+    const nameErr = validateName(name); // reuse the onboarding name rules
+    if (nameErr) {
+      Alert.alert('Invalid name', nameErr);
       return;
     }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    updateProfile({
+    if (!title.trim()) {
+      Alert.alert('Required', 'Title is required.');
+      return;
+    }
+    // Bio is the professional-completion field — keep it valid so saving an
+    // edit can't regress the user's onboarding status back a step.
+    const bioErr = validateBio(bio).error;
+    if (bioErr) {
+      Alert.alert('Invalid bio', bioErr);
+      return;
+    }
+    setSaving(true);
+    const res = await persistProfile({
       name: name.trim(),
       title: title.trim(),
       bio: bio.trim(),
@@ -141,7 +158,15 @@ export default function EditProfileScreen() {
       availability,
       skills: skills.split(',').map(s => s.trim()).filter(Boolean),
     });
-    router.back();
+    setSaving(false);
+    if (res.ok) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } else {
+      // Keep the user's entered values so they can retry.
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Could not save', res.message ?? 'Please try again.');
+    }
   };
 
   return (
@@ -151,8 +176,12 @@ export default function EditProfileScreen() {
           <Ionicons name="close" size={24} color={C.text} />
         </Pressable>
         <Text style={styles.topBarTitle}>Edit Profile</Text>
-        <Pressable onPress={handleSave}>
-          <Ionicons name="checkmark" size={26} color={C.primary} />
+        <Pressable onPress={handleSave} disabled={saving} accessibilityRole="button" accessibilityLabel="Save profile">
+          {saving ? (
+            <ActivityIndicator color={C.primary} />
+          ) : (
+            <Ionicons name="checkmark" size={26} color={C.primary} />
+          )}
         </Pressable>
       </View>
 

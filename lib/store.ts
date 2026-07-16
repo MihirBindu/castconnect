@@ -21,6 +21,7 @@ export interface AppState {
   loadError: string | null;
   retryLoad: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
+  persistProfile: (updates: Partial<UserProfile>) => Promise<{ ok: boolean; message?: string }>;
   addApplication: (castingCallId: string, castingCallTitle: string) => Promise<ApplyOutcome>;
   withdrawApplication: (castingCallId: string) => Promise<{ ok: boolean; message?: string }>;
   sendMessage: (conversationId: string, content: string) => Promise<void>;
