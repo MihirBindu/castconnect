@@ -6,6 +6,7 @@ import { useColors } from '@/lib/ThemeContext';
 import { ThemeColors } from '@/constants/colors';
 import { CastingCall } from '@/lib/types';
 import { INDUSTRY_LABELS } from '@/lib/mock-data';
+import { useAppState } from '@/lib/store';
 import { SkillTag } from './SkillTag';
 import * as Haptics from 'expo-haptics';
 
@@ -99,6 +100,11 @@ function makeStyles(C: ThemeColors) {
       color: C.textTertiary,
       fontFamily: 'DMSans_400Regular',
     },
+    headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
     title: {
       fontSize: 17,
       color: C.text,
@@ -168,10 +174,17 @@ function makeStyles(C: ThemeColors) {
 export function CastingCallCard({ item, compact, applied }: CastingCallCardProps) {
   const C = useColors();
   const styles = React.useMemo(() => makeStyles(C), [C]);
+  const { isBookmarked, toggleBookmark } = useAppState();
+  const saved = isBookmarked(item.id);
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname: '/casting/[id]', params: { id: item.id } });
+  };
+
+  const handleBookmark = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void toggleBookmark(item.id);
   };
 
   return (
@@ -197,7 +210,20 @@ export function CastingCallCard({ item, compact, applied }: CastingCallCardProps
             </View>
           )}
         </View>
-        <Text style={styles.timeAgo}>{formatTimeAgo(item.createdAt)}</Text>
+        <View style={styles.headerRight}>
+          <Text style={styles.timeAgo}>{formatTimeAgo(item.createdAt)}</Text>
+          {!compact && (
+            <Pressable
+              onPress={handleBookmark}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={saved ? 'Remove from saved' : 'Save casting call'}
+              accessibilityState={{ selected: saved }}
+            >
+              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={18} color={saved ? C.primary : C.textTertiary} />
+            </Pressable>
+          )}
+        </View>
       </View>
 
       <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
