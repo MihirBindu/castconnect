@@ -134,10 +134,16 @@ begin
   new.name := v_name;
   new.updated_at := now();
 
+  -- Name rules must stay in sync with lib/profileValidation.ts.
+  -- Do NOT use POSIX [[:alpha:]] — on many Postgres locales it only matches
+  -- ASCII A–Z, so names like "José" pass client \p{L} validation but leave
+  -- profile_completed = false (cryptic "incomplete" error). Explicit Unicode
+  -- ranges cover Latin letters/marks + Devanagari (common for IN names),
+  -- spaces, hyphen, and straight/curly apostrophe.
   new.profile_completed :=
         char_length(v_name) between 2 and 100
-    and v_name ~ '[[:alpha:]]'
-    and v_name ~ '^[[:alpha:][:space:]''-]+$'
+    and v_name ~ E'[A-Za-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF\\u0100-\\u017F\\u0900-\\u097F]'
+    and v_name ~ E'^[A-Za-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF\\u0100-\\u017F\\u0300-\\u036F\\u0900-\\u097F[:space:]''\\u2019-]+$'
     and new.age is not null       and new.age between 18 and 100
     and new.height_cm is not null and new.height_cm between 90 and 250
     and coalesce(new.body_type, '') in (

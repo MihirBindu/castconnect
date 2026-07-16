@@ -21,6 +21,8 @@ export const INCHES_MAX = 11;
 // Must also contain at least one real letter (rejects "---" or "  ").
 // Built defensively: some JS engines (older Hermes) don't support Unicode
 // property escapes, so we fall back to a Latin range instead of crashing.
+// Keep in sync with public.set_profile_completion() in supabase/schema.sql
+// (explicit Unicode ranges — not POSIX [[:alpha:]], which is often ASCII-only).
 function safeRegex(pattern: string, flags: string, fallback: RegExp): RegExp {
   try {
     return new RegExp(pattern, flags);
