@@ -394,6 +394,19 @@ export interface Message {
   status?: 'sending' | 'sent' | 'failed';
 }
 
+export type NotificationType = 'message' | 'application_status' | 'follow';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType | string;
+  actorId: string | null;
+  entityId: string | null;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface Conversation {
   id: string;
   participantId: string;

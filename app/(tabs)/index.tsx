@@ -56,6 +56,23 @@ function makeStyles(C: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    notifBadge: {
+      position: 'absolute',
+      top: 6,
+      right: 6,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      paddingHorizontal: 4,
+      backgroundColor: C.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    notifBadgeText: {
+      fontSize: 10,
+      color: C.black,
+      fontFamily: 'DMSans_700Bold',
+    },
     statsCard: {
       marginHorizontal: 20,
       borderRadius: 16,
@@ -148,7 +165,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { myProfile, profiles, castingCalls, applications, isLoading, retryLoad } = useAppState();
+  const { myProfile, profiles, castingCalls, applications, isLoading, retryLoad, unreadNotifications } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
@@ -174,10 +191,18 @@ export default function HomeScreen() {
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push('/notifications' as any);
             }}
+            accessibilityRole="button"
+            accessibilityLabel={unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread` : 'Notifications'}
           >
             <View style={styles.notifBtn}>
               <Ionicons name="notifications-outline" size={22} color={C.text} />
+              {unreadNotifications > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>{unreadNotifications > 9 ? '9+' : unreadNotifications}</Text>
+                </View>
+              )}
             </View>
           </Pressable>
         </View>
