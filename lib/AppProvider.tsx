@@ -12,6 +12,7 @@ import { getConversations, getMessages as fetchMessages, sendMessage as sendMess
 import { getMyApplications, applyToCastingCall, withdrawApplication as withdrawApplicationApi } from './api/applications';
 import { getBookmarks, addBookmark, removeBookmark } from './api/bookmarks';
 import { getNotifications, markAllNotificationsRead } from './api/notifications';
+import { getMyBlocks, blockUser as blockUserApi, unblockUser as unblockUserApi, reportUser as reportUserApi } from './api/blocks';
 import {
   MY_PROFILE,
   SAMPLE_PROFILES,
@@ -43,6 +44,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   const [crewProjectName, setCrewProjectNameState] = useState('My Production');
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -55,6 +57,8 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   const bookmarksRef = useRef(bookmarks);
   useEffect(() => { bookmarksRef.current = bookmarks; }, [bookmarks]);
+  const blockedRef = useRef(blockedIds);
+  useEffect(() => { blockedRef.current = blockedIds; }, [blockedIds]);
 
   useEffect(() => {
     if (session?.user) {
@@ -70,7 +74,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setLoadError(null);
     setIsOffline(false);
     try {
-      const [profile, allProfiles, calls, convs, apps, bmarks, notifs] = await Promise.all([
+      const [profile, allProfiles, calls, convs, apps, bmarks, notifs, blocked] = await Promise.all([
         getProfile(userId),
         getProfiles(),
         getCastingCalls(),
@@ -78,6 +82,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
         getMyApplications(userId),
         getBookmarks(userId),
         getNotifications(userId),
+        getMyBlocks(userId),
       ]);
 
       if (profile) {
@@ -91,6 +96,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
       if (apps.length) setApplications(apps);
       setBookmarks(bmarks);
       setNotifications(notifs);
+      setBlockedIds(blocked);
 
       log.info('loadFromSupabase complete', {
         profiles: allProfiles.length,
@@ -359,6 +365,32 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     if (uid) await markAllNotificationsRead(uid);
   }, []);
 
+  const blockUser = useCallback(async (userId: string) => {
+    const uid = sessionRef.current?.user?.id;
+    if (uid === userId) return; // can't block yourself
+    setBlockedIds(prev => (prev.includes(userId) ? prev : [...prev, userId]));
+    if (!uid) return;
+    const ok = await blockUserApi(uid, userId);
+    if (!ok) setBlockedIds(prev => prev.filter(id => id !== userId)); // revert
+  }, []);
+
+  const unblockUser = useCallback(async (userId: string) => {
+    const uid = sessionRef.current?.user?.id;
+    const wasBlocked = blockedRef.current.includes(userId);
+    setBlockedIds(prev => prev.filter(id => id !== userId));
+    if (!uid) return;
+    const ok = await unblockUserApi(uid, userId);
+    if (!ok && wasBlocked) setBlockedIds(prev => (prev.includes(userId) ? prev : [...prev, userId])); // revert
+  }, []);
+
+  const isBlocked = useCallback((userId: string) => blockedIds.includes(userId), [blockedIds]);
+
+  const reportUser = useCallback(async (userId: string, reason: string, details?: string) => {
+    const uid = sessionRef.current?.user?.id;
+    if (!uid || uid === userId) return false;
+    return reportUserApi(uid, userId, reason, details ?? '');
+  }, []);
+
   const addToCrewBasket = useCallback((profileId: string, role: CrewRole) => {
     // Can't shortlist yourself (profiles.id === auth user id).
     if (sessionRef.current?.user?.id === profileId) return;
@@ -409,6 +441,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     bookmarks,
     notifications,
     unreadNotifications: notifications.reduce((n, x) => (x.read ? n : n + 1), 0),
+    blockedIds,
     isLoading,
     isOffline,
     loadError,
@@ -418,6 +451,10 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     toggleBookmark,
     isBookmarked,
     markNotificationsRead,
+    blockUser,
+    unblockUser,
+    isBlocked,
+    reportUser,
     addApplication,
     withdrawApplication,
     sendMessage,
@@ -430,7 +467,7 @@ export function AppProvider({ children, session }: { children: ReactNode; sessio
     setCrewProjectName,
     isInCrewBasket,
     signOut,
-  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, bookmarks, notifications, isLoading, isOffline, loadError, retryLoad, updateProfile, persistProfile, toggleBookmark, isBookmarked, markNotificationsRead, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
+  }), [session, myProfile, profiles, castingCalls, conversations, messages, applications, crewBasket, crewProjectName, bookmarks, notifications, blockedIds, isLoading, isOffline, loadError, retryLoad, updateProfile, persistProfile, toggleBookmark, isBookmarked, markNotificationsRead, blockUser, unblockUser, isBlocked, reportUser, addApplication, withdrawApplication, sendMessage, resendMessage, loadConversation, toggleConnection, addToCrewBasket, removeFromCrewBasket, clearCrewBasket, setCrewProjectName, isInCrewBasket, signOut]);
 
   return (
     <AppContext.Provider value={value}>
