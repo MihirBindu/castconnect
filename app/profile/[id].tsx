@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -255,7 +255,7 @@ export default function ProfileDetail() {
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { profiles, myProfile, conversations, toggleConnection, isBlocked, blockUser, unblockUser, reportUser } = useAppState();
+  const { profiles, myProfile, conversations, toggleConnection, isBlocked, blockUser, unblockUser, reportUser, recordProfileView } = useAppState();
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const topPadding = insets.top + webTopInset;
 
@@ -263,6 +263,11 @@ export default function ProfileDetail() {
   // "preview as public" works.
   const profile = id === myProfile.id ? myProfile : profiles.find(p => p.id === id);
   const isConnected = myProfile.connections.includes(id || '');
+
+  // Record a view when opening someone else's profile.
+  useEffect(() => {
+    if (id && id !== myProfile.id) void recordProfileView(id);
+  }, [id, myProfile.id, recordProfileView]);
 
   if (!profile) {
     return (

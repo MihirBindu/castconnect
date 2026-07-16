@@ -68,6 +68,7 @@ function RootLayoutNav() {
         <Stack.Screen name="casting/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile/edit" options={{ headerShown: false, presentation: "modal" }} />
+        <Stack.Screen name="profile/viewers" options={{ headerShown: false }} />
         <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="crew-basket" options={{ headerShown: false }} />
         <Stack.Screen name="crew-review" options={{ headerShown: false }} />

@@ -570,6 +570,25 @@ create policy "saved_searches_insert" on public.saved_searches for insert with c
 create policy "saved_searches_delete" on public.saved_searches for delete using (auth.uid() = user_id);
 
 -- ────────────────────────────────────────────────────────────
+-- PROFILE VIEWS (who viewed whom) — see migrations/0011_profile_views.sql
+-- ────────────────────────────────────────────────────────────
+create table if not exists public.profile_views (
+  viewer_id  uuid not null references public.profiles(id) on delete cascade,
+  viewed_id  uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (viewer_id, viewed_id)
+);
+create index if not exists profile_views_viewed_idx on public.profile_views (viewed_id, created_at desc);
+
+alter table public.profile_views enable row level security;
+drop policy if exists "profile_views_select" on public.profile_views;
+drop policy if exists "profile_views_insert" on public.profile_views;
+drop policy if exists "profile_views_update" on public.profile_views;
+create policy "profile_views_select" on public.profile_views for select using (auth.uid() = viewed_id);
+create policy "profile_views_insert" on public.profile_views for insert with check (auth.uid() = viewer_id and viewer_id <> viewed_id);
+create policy "profile_views_update" on public.profile_views for update using (auth.uid() = viewer_id);
+
+-- ────────────────────────────────────────────────────────────
 -- STORAGE — portfolio media (see supabase/migrations/0005_portfolio.sql)
 --   portfolio-media : PUBLIC showcase images (profile photo, portfolio photos)
 --   portfolio-docs  : PRIVATE award documents (served via signed URLs)
