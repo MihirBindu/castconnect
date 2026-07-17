@@ -419,7 +419,10 @@ insert into public.connections (follower_id, following_id) values
 
 -- ────────────────────────────────────────────────────────────
 -- CASTING CALLS
--- applicant_count seeded directly (trigger would double-count)
+-- applicant_count seeded directly (trigger would double-count).
+-- Deadlines are relative to the seed date (current_date + N days) so the
+-- demo calls are always in the future — i.e. "open" and applyable, and not
+-- rejected by the deadline guard added in migration 0006.
 -- ────────────────────────────────────────────────────────────
 insert into public.casting_calls (
   id, title, description, role_needed, project_type, project_name,
@@ -431,7 +434,7 @@ insert into public.casting_calls (
  'Lead Male Actor for Period Drama',
  'Seeking a versatile actor aged 28-35 for the lead role in an upcoming period drama set in 1947 India. Must be comfortable with intense emotional scenes and period dialect.',
  'Lead Actor','film','The Last Monsoon',
- 'Mumbai, India','As per industry standards','2026-04-15',
+ 'Mumbai, India','As per industry standards',(current_date + 30),
  '00000000-0000-4000-8000-000000000004',
  array['Acting','Hindi','Dialogue Delivery','Horse Riding'],
  '5+ years','open',24,'2026-02-10T10:00:00Z'),
@@ -440,7 +443,7 @@ insert into public.casting_calls (
  'Cinematographer for OTT Series',
  'Looking for an experienced cinematographer for an 8-episode thriller series. Must have experience with low-light shooting and handheld work.',
  'Cinematographer','ott','Shadows Within',
- 'Delhi & Jaipur','Competitive package','2026-03-30',
+ 'Delhi & Jaipur','Competitive package',(current_date + 45),
  '00000000-0000-4000-8000-000000000005',
  array['Cinematography','Low-light','Handheld','ARRI'],
  '8+ years','open',12,'2026-02-05T10:00:00Z'),
@@ -449,7 +452,7 @@ insert into public.casting_calls (
  'Supporting Actress for Ad Film',
  'Casting for a supporting role in a premium automobile brand ad. Looking for someone aged 25-30 with a natural, modern look.',
  'Supporting Actress','ad_film','Brand Campaign',
- 'Goa, India','2-3L per day','2026-03-20',
+ 'Goa, India','2-3L per day',(current_date + 20),
  '00000000-0000-4000-8000-000000000005',
  array['Acting','Modeling','English'],
  '2+ years','open',56,'2026-02-15T10:00:00Z'),
@@ -458,7 +461,7 @@ insert into public.casting_calls (
  'Editor for Web Series',
  'Need a skilled editor for a 6-episode web series. Proficiency in DaVinci Resolve or Premiere Pro required. Fast turnaround needed.',
  'Editor','web_series','City Lights',
- 'Remote','Per episode basis','2026-04-01',
+ 'Remote','Per episode basis',(current_date + 60),
  '00000000-0000-4000-8000-000000000004',
  array['Editing','DaVinci Resolve','Color Grading','Sound Sync'],
  '3+ years','open',18,'2026-02-18T10:00:00Z'),
@@ -467,16 +470,21 @@ insert into public.casting_calls (
  'Fresh Faces for Theatre Production',
  'Open audition for a contemporary Hindi play. Looking for actors aged 20-40 with theatre background. No prior film experience needed.',
  'Theatre Actor','theatre','Rang Manch',
- 'Delhi, India','Monthly stipend + performance bonus','2026-05-01',
+ 'Delhi, India','Monthly stipend + performance bonus',(current_date + 75),
  '00000000-0000-4000-8000-000000000005',
  array['Theatre','Hindi','Stage Presence','Improvisation'],
  'Open to freshers','open',42,'2026-02-20T10:00:00Z');
 
 -- ────────────────────────────────────────────────────────────
 -- APPLICATIONS (Alex Rivera applied to cc-1 and cc-4)
--- Bypass trigger to avoid double-counting applicant_count
+-- Disable both application triggers for the seed:
+--   • on_application_created — would double-count applicant_count (seeded directly)
+--   • trg_check_application_open (migration 0006) — enforces the app's
+--     "call open + deadline not passed" rule, which we bypass while seeding
+--     historical data.
 -- ────────────────────────────────────────────────────────────
 alter table public.applications disable trigger on_application_created;
+alter table public.applications disable trigger trg_check_application_open;
 
 insert into public.applications (id, casting_call_id, applicant_id, status, note, applied_at) values
   ('a1100000-0000-4000-8000-000000000001',
@@ -489,6 +497,7 @@ insert into public.applications (id, casting_call_id, applicant_id, status, note
    '00000000-0000-4000-8000-000000000000',
    'applied','','2026-02-19T14:00:00Z');
 
+alter table public.applications enable trigger trg_check_application_open;
 alter table public.applications enable trigger on_application_created;
 
 -- ────────────────────────────────────────────────────────────
