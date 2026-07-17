@@ -262,7 +262,18 @@ npm run db:seed       # reloads the demo data — keeps the schema and real user
 
 This loads `supabase/seed.sql` straight into the database via [`scripts/seed.mjs`](scripts/seed.mjs) **without dropping the schema** — a much lighter refresh than a full reset. The seed only deletes and re-inserts the demo rows (ids `00000000-…` / `cc…`), so **your real users and their data are untouched**. It's safe to run repeatedly, and casting-call deadlines are relative (`current_date + N`) so the demo calls are always open.
 
-It reads `DATABASE_URL` from `.env` (Supabase → **Settings → Database → Connection string (URI)**) and needs the database to be reachable on its Postgres port. If your network/VPN blocks direct Postgres connections (same failure mode as `db:reset`), run it from an unrestricted network.
+It reads `DATABASE_URL` from `.env` (Supabase → **Settings → Database → Connection string (URI)**) and needs the database to be reachable on its Postgres port. If your network/VPN blocks direct Postgres connections (same failure mode as `db:reset`), see the note below.
+
+#### Connection issues (VPN / restricted networks)
+
+Supabase exposes two pooler ports, and some VPNs/firewalls treat them very differently:
+
+| Port | Mode | Used by | Notes |
+|---|---|---|---|
+| `5432` | Session pooler | `supabase db reset` / `db push` (the CLI) | Full Postgres session. Some VPNs **black-hole the TLS handshake** here — TCP connects, then the connection stalls or resets (`connection reset by peer` / timeout). |
+| `6543` | Transaction pooler | `npm run db:seed` | Per-transaction. Works over more restrictive networks; fine for the seed, which runs as a single transaction. |
+
+If `db:reset` / `db:migrate` hang or fail with connection resets/timeouts, your network is blocking the **session pooler**. Point `DATABASE_URL` at the **transaction pooler (port `6543`)** — Supabase → Settings → Database → Connection string → *Transaction pooler* — and use `npm run db:seed`. The Supabase CLI commands (`db reset` / `db push`) need the session pooler or a direct connection, so run those off the VPN / from an unrestricted network.
 
 ---
 
