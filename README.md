@@ -240,7 +240,19 @@ npx supabase link --project-ref odjuakgpungtkfisxrjh   # prompts for the databas
 
 **Workflow:** create a migration → write the SQL in the new file under `supabase/migrations/` → `npm run db:migrate`. Keep migrations **idempotent** (`create … if not exists`, `create or replace`, `drop policy if exists` + `create policy`) so they're safe to re-run.
 
-> The existing `0001`–`0011` are already recorded as applied in the remote migration history, so the first `db:migrate` is a clean no-op — only new files run.
+> The existing `0000`–`0011` are already recorded as applied in the remote migration history, so the first `db:migrate` is a clean no-op — only new files run.
+
+### Reset & re-seed
+
+```bash
+npm run db:reset      # ⚠️ DESTRUCTIVE — see below
+```
+
+This runs `supabase db reset --linked`, which **drops the public schema on the linked project, replays every migration from scratch (`0000_init` → `0011`), then loads `supabase/seed.sql`** (≈20 demo profiles + auth users, casting calls, messages, connections, crew baskets). `supabase/migrations/0000_init.sql` is the base schema (core tables + functions + policies) so the chain can rebuild the database completely.
+
+> **⚠️ This wipes ALL data in the linked project** (real users, casting calls, messages — everything) and replaces it with the demo seed. The CLI asks you to confirm first. Only run it against a project you're happy to reset. If you have a **preview branch** (`supabase branches create`), test the reset there before running it on your main project. To rebuild the schema **without** loading the seed, add `--no-seed`.
+
+The demo seed data lives in [`supabase/seed.sql`](supabase/seed.sql); edit it to change what a reset restores.
 
 ---
 
@@ -253,6 +265,7 @@ npx supabase link --project-ref odjuakgpungtkfisxrjh   # prompts for the databas
 | `npm run db:migrate` | Apply pending Supabase migrations (terminal) |
 | `npm run db:migrate:new -- <name>` | Create a new Supabase migration file |
 | `npm run db:migrate:list` | List local vs. remote migration status |
+| `npm run db:reset` | ⚠️ Drop, replay all migrations, and re-seed the linked project |
 | `npm run db:push` | Push Drizzle schema to the database |
 | `npm run lint` | Run ESLint |
 | `npm run expo:static:build` | Build static web export |
