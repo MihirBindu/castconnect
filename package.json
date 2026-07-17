@@ -15,6 +15,7 @@
     "db:migrate:new": "npx --yes supabase migration new",
     "db:migrate:list": "npx --yes supabase migration list",
     "db:reset": "npx --yes supabase db reset --linked",
+    "db:seed": "node scripts/seed.mjs",
     "start": "npx expo start",
     "lint": "npx expo lint",
     "lint:fix": "npx expo lint --fix"

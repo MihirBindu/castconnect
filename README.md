@@ -254,6 +254,16 @@ This runs `supabase db reset --linked`, which **drops the public schema on the l
 
 The demo seed data lives in [`supabase/seed.sql`](supabase/seed.sql); edit it to change what a reset restores.
 
+#### Re-seed only (non-destructive)
+
+```bash
+npm run db:seed       # reloads the demo data — keeps the schema and real users
+```
+
+This loads `supabase/seed.sql` straight into the database via [`scripts/seed.mjs`](scripts/seed.mjs) **without dropping the schema** — a much lighter refresh than a full reset. The seed only deletes and re-inserts the demo rows (ids `00000000-…` / `cc…`), so **your real users and their data are untouched**. It's safe to run repeatedly, and casting-call deadlines are relative (`current_date + N`) so the demo calls are always open.
+
+It reads `DATABASE_URL` from `.env` (Supabase → **Settings → Database → Connection string (URI)**) and needs the database to be reachable on its Postgres port. If your network/VPN blocks direct Postgres connections (same failure mode as `db:reset`), run it from an unrestricted network.
+
 ---
 
 ## Available Scripts
@@ -266,6 +276,7 @@ The demo seed data lives in [`supabase/seed.sql`](supabase/seed.sql); edit it to
 | `npm run db:migrate:new -- <name>` | Create a new Supabase migration file |
 | `npm run db:migrate:list` | List local vs. remote migration status |
 | `npm run db:reset` | ⚠️ Drop, replay all migrations, and re-seed the linked project |
+| `npm run db:seed` | Reload demo data from `supabase/seed.sql` (non-destructive; keeps schema & real users) |
 | `npm run db:push` | Push Drizzle schema to the database |
 | `npm run lint` | Run ESLint |
 | `npm run expo:static:build` | Build static web export |
