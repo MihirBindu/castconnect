@@ -68,87 +68,87 @@ insert into auth.users (
 )
 values
   ('00000000-0000-4000-8000-000000000000','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'alex.rivera@email.com',    crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'alex.rivera@email.com',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Alex Rivera"}',         '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'arjun@email.com',          crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'arjun@email.com',          extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Arjun Mehta"}',         '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000002','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'priya.sharma@email.com',   crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'priya.sharma@email.com',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Priya Sharma"}',        '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000003','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'rohan.k@email.com',        crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'rohan.k@email.com',        extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Rohan Kapoor"}',        '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000004','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'contact@kavitaprod.com',   crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'contact@kavitaprod.com',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Kavita Productions"}',  '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000005','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'neha@castingdesk.com',     crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'neha@castingdesk.com',     extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Neha Agarwal"}',        '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000006','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'sid.rao@email.com',        crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'sid.rao@email.com',        extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Siddharth Rao"}',       '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000007','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'meera.desai@email.com',    crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'meera.desai@email.com',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Meera Desai"}',         '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000008','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'vikram.writer@email.com',  crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'vikram.writer@email.com',  extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Vikram Singh"}',        '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000009','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'anita.light@email.com',    crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'anita.light@email.com',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Anita Kumari"}',        '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000010','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'deepak.pd@email.com',      crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'deepak.pd@email.com',      extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Deepak Malhotra"}',     '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000011','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'fatima.mua@email.com',     crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'fatima.mua@email.com',     extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Fatima Khan"}',         '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000012','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'rajesh.costume@email.com', crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'rajesh.costume@email.com', extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Rajesh Nair"}',         '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000013','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'aakash.vfx@email.com',     crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'aakash.vfx@email.com',     extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Aakash Patel"}',        '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000014','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'sunita.dance@email.com',   crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'sunita.dance@email.com',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Sunita Reddy"}',        '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000015','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'rahul.stunts@email.com',   crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'rahul.stunts@email.com',   extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Rahul Verma"}',         '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000016','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'kavya.iyer@email.com',     crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'kavya.iyer@email.com',     extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Kavya Iyer"}',          '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000017','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'mohit.dop@email.com',      crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'mohit.dop@email.com',      extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Mohit Joshi"}',         '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000018','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'zara.director@email.com',  crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'zara.director@email.com',  extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Zara Sheikh"}',         '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000019','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'karan.light@email.com',    crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'karan.light@email.com',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Karan Bhatia"}',        '{"provider":"email","providers":["email"]}'),
 
   ('00000000-0000-4000-8000-000000000020','00000000-0000-0000-0000-000000000000','authenticated','authenticated',
-   'tara.writer@email.com',    crypt('Test@1234', gen_salt('bf', 10)), now(), now(), now(),
+   'tara.writer@email.com',    extensions.crypt('Test@1234', extensions.gen_salt('bf', 10)), now(), now(), now(),
    '{"name":"Tara Menon"}',          '{"provider":"email","providers":["email"]}');
 
 -- ────────────────────────────────────────────────────────────
